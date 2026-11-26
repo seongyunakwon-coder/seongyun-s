@@ -91,6 +91,19 @@ p { margin: 0; }
 .learn h3, .steps h3, .deep h3 { margin: 0; font: 600 14px var(--f-body); letter-spacing: .04em; color: var(--muted); }
 .steps ol { margin: 6px 0 0; padding-left: 1.4em; display: grid; gap: 4px; }
 .steps li[hidden] { display: none; }
+.subs { display: flex; flex-wrap: wrap; gap: 6px; }
+.subchip { border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 5px 12px; font-size: 14px; }
+.subchip small { font-size: 11px; color: var(--accent); margin-left: 2px; }
+.subchip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.subchip[aria-pressed="true"] small { color: var(--paper); opacity: .8; }
+.subgrid { display: grid; gap: 8px; }
+.subrow { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; font-size: 14px; }
+.sublabel { display: inline-flex; align-items: center; gap: 6px; }
+.sublabel i { width: 8px; height: 8px; border-radius: 50%; }
+.subcells { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.subcell { background: var(--soft); border-radius: 8px; padding: 2px 8px; font-size: 13px; }
+.subcell b { font-variant-numeric: tabular-nums; }
+.subcell.empty { color: var(--muted); }
 .steps .row { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .trap, .rule { border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
 .trap { background: color-mix(in srgb, var(--bad) 9%, var(--paper)); border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--paper)); }
@@ -208,6 +221,47 @@ const CATS = {
   intuit: { name: '직관 훈련',   desc: '페르미 추정, 확률·통계 직관, 인지 편향. 빠르게 감을 잡고 근거를 따져 보는 연습', timed: true },
   logic:  { name: '논리 스프린트', desc: '삼단논법, 조건문, 수열, 참·거짓 퍼즐 등 짧은 시간에 논리를 전개하는 문제', timed: true },
 };
+// 요일마다 하위 주제가 주 단위로 돌아감. 첫 항목(base)은 원래 범위
+const SUBS = {
+  sci: [
+    { k: 'base', name: '기초과학' },
+    { k: 'ai', name: 'AI·디지털', desc: 'AI와 머신러닝이 작동하는 원리, 인터넷·암호·개인정보, 알고리즘이 사회에 미치는 영향. 특정 기업이나 제품 홍보 없이 개념 위주로' },
+    { k: 'health', name: '건강·의학', desc: '면역, 약과 백신, 수면·영양·운동의 과학, 근거 중심 의학을 읽는 법. 개인 진단이나 처방처럼 읽힐 내용은 내지 않는다' },
+    { k: 'climate', name: '기후·환경', desc: '온실효과와 탄소 순환, 기후 데이터 읽기, 에너지 전환, 생태계와 생물다양성' },
+  ],
+  pol: [
+    { k: 'base', name: '정치·사회' },
+    { k: 'law', name: '법과 권리', desc: '헌법과 기본권, 계약·근로·소비자 보호 같은 일상 법률 상식, 형사 절차의 원칙. 한국 법 기준이며 개별 사건의 법률 상담처럼 쓰지 않는다' },
+  ],
+  lang: [
+    { k: 'base', name: '언어·철학' },
+    { k: 'ethics', name: '윤리', desc: '공리주의·의무론·덕 윤리 같은 윤리 이론과, AI 윤리·생명윤리·동물 윤리 같은 응용윤리의 쟁점. 한쪽 결론을 정답으로 강요하지 않고 논거를 묻는다' },
+    { k: 'religion', name: '세계 종교', desc: '세계 주요 종교의 기원, 핵심 가르침, 역사·문화에 끼친 영향. 비교 중심으로, 우열 판단 없이' },
+  ],
+  art: [
+    { k: 'base', name: '예술·역사' },
+    { k: 'geo', name: '세계 지리·문화', desc: '대륙과 지역별 지리, 기후와 생활 방식, 나라별 문화와 그 역사적 맥락' },
+  ],
+  econ: [
+    { k: 'base', name: '경제' },
+    { k: 'money', name: '개인 재무', desc: '복리, 인플레이션과 실질 수익, 세금·연금·보험의 기본 구조, 분산투자의 원리. 특정 상품이나 종목 추천 없이 개념 위주로' },
+  ],
+  intuit: [
+    { k: 'base', name: '직관 훈련' },
+    { k: 'stats', name: '통계·데이터 읽기', desc: '평균과 중앙값, 표본과 여론조사 오차범위, 상관관계와 인과관계, 그래프로 속이는 법. 숫자로 빠르게 판단하는 연습' },
+    { k: 'psych', name: '심리학', desc: '동기·습관·기억·감정, 사회심리학의 유명한 실험과 개념, 그리고 그 실험의 재현성 논란까지' },
+  ],
+  logic: [
+    { k: 'base', name: '논리 스프린트' },
+    { k: 'media', name: '미디어 리터러시', desc: '가짜뉴스와 조작된 통계 판별, 출처 확인, 프레이밍과 낚시성 제목, 딥페이크. 짧은 시간에 "이 주장을 믿어도 되나"를 따지는 연습' },
+  ],
+};
+// 2024-01-01(월)부터 센 주 번호로 이번 주 하위 주제를 고름
+const WEEKN = Math.floor((Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) - Date.UTC(2024, 0, 1)) / (7 * 86400000));
+const weeklySub = cat => SUBS[cat][WEEKN % SUBS[cat].length].k;
+const subPick = {}; // 이번 방문에서 직접 고른 하위 주제
+const curSub = cat => subPick[cat] || weeklySub(cat);
+const subOf = (cat, k) => SUBS[cat].find(s => s.k === k) || SUBS[cat][0];
 const WEEK = ['logic', 'sci', 'pol', 'lang', 'art', 'econ', 'intuit']; // 일~토
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 const SECONDS = 60;
@@ -415,9 +469,12 @@ function weakTopics() {
 function recentTopics(cat) {
   return [...new Set(sessions.filter(s => s.cat === cat).flatMap(s => (s.results || []).map(r => r.topic)))].slice(-25);
 }
+// 기초 주제는 예전 저장 키를 그대로 씀(이미 받아 둔 오늘 문제 유지)
+const quizKey = cat => curSub(cat) === 'base' ? `${TODAY}-${cat}` : `${TODAY}-${cat}-${curSub(cat)}`;
 function buildPrompt(cat) {
-  const c = CATS[cat];
-  return `너는 대학 교양 수업 강사다. 날짜 ${TODAY}, 분야 "${c.name}"의 데일리 퀴즈를 만든다. 범위: ${c.desc}.
+  const c = CATS[cat], sub = subOf(cat, curSub(cat));
+  const scope = sub.k === 'base' ? c.desc : sub.desc;
+  return `너는 대학 교양 수업 강사다. 날짜 ${TODAY}, 분야 "${sub.k === 'base' ? c.name : `${c.name} · ${sub.name}`}"의 데일리 퀴즈를 만든다. 범위: ${scope}.
 목적: 먼저 문제로 학습자가 얼마나 이해하고 있는지 진단하고, 풀고 나면 해설과 미니 강의로 지식을 넓힌다.
 규칙:
 - 한국어. 대학 교양 수준. 지엽적인 암기보다 개념 이해와 적용을 묻는다.
@@ -461,8 +518,8 @@ async function generate(cat, fresh) {
     const quiz = validQuiz(j);
     if (!quiz) throw { code: 'invalid_json' };
     quiz.items = quiz.items.map(shuffleChoices);
-    const key = `${TODAY}-${cat}` + (fresh ? '-' + Date.now() : '');
-    await store.putQuiz(`${TODAY}-${cat}`, { ...quiz, key }).catch(() => {});
+    const key = quizKey(cat) + (fresh ? '-' + Date.now() : '');
+    await store.putQuiz(quizKey(cat), { ...quiz, key, sub: curSub(cat) }).catch(() => {});
     start(cat, quiz, 'claude');
   } catch (e) {
     if (e?.code === 'not_granted' || e?.code === 'sampling_disabled') sample = null;
@@ -513,6 +570,7 @@ function maxStreak() {
   for (const d of days) { const p = prev && dateKey(new Date(new Date(prev + 'T00:00').getTime() + 86400000)); run = prev && d === p ? run + 1 : 1; best = Math.max(best, run); prev = d; }
   return best;
 }
+const subsTried = () => new Set(sessions.filter(s => SUBS[s.cat]).map(s => s.cat + ':' + (s.sub || 'base'))).size;
 const allResults = () => sessions.flatMap(s => (s.results || []).map(r => ({ ...r, cat: s.cat })));
 const BADGES = [
   { id: 'first',  ic: '🌱', name: '첫 걸음',    desc: '첫 세트 완료',                      test: () => sessions.length >= 1 },
@@ -524,6 +582,7 @@ const BADGES = [
   { id: 'str3',   ic: '🔥', name: '불붙었다',   desc: '3일 연속 학습',                     test: () => maxStreak() >= 3 },
   { id: 'str7',   ic: '🌋', name: '활화산',     desc: '7일 연속 학습',                     test: () => maxStreak() >= 7 },
   { id: 'week',   ic: '🗓️', name: '일주일 정복', desc: '7개 분야를 모두 한 번 이상',          test: () => Object.keys(CATS).every(k => sessions.some(s => s.cat === k)) },
+  { id: 'explore', ic: '🧭', name: '교양 탐험가', desc: '하위 주제 10개 이상 풀어 보기',      test: () => subsTried() >= 10 },
   { id: 'hund',   ic: '📚', name: '백문백답',   desc: '누적 100문제',                      test: () => allResults().length >= 100 },
 ];
 const earned = () => new Set(BADGES.filter(b => b.test()).map(b => b.id));
@@ -561,12 +620,15 @@ function renderMeta() {
 async function renderHome(note = '') {
   const cat = state.cat, c = CATS[cat];
   const isToday = cat === WEEK[today.getDay()];
-  const saved = await store.getQuiz(`${TODAY}-${cat}`).catch(() => null);
+  const sk = curSub(cat), sub = subOf(cat, sk), weekly = weeklySub(cat);
+  const saved = await store.getQuiz(quizKey(cat)).catch(() => null);
   const doneCount = sessions.filter(s => s.date === TODAY && s.cat === cat).length;
   $('#main').innerHTML = `<section class="sheet">
     <div class="eyebrow"><span class="chip"><i style="background:var(--c-${cat})"></i>${esc(c.name)}</span>${isToday ? '<span>오늘의 분야</span>' : '<span>다른 요일 분야 미리 풀기</span>'}${c.timed ? '<span>· 문항당 60초</span>' : ''}</div>
-    <h2>${c.timed ? (cat === 'logic' ? '짧은 시간에 논리를 끝까지 밀고 가 보세요' : '감으로 먼저 답하고, 근거로 확인해 보세요') : '먼저 풀고, 그다음에 배웁니다'}</h2>
-    <p class="lead">${esc(c.desc)}. 5문항을 풀 때마다 얼마나 확신하는지도 고르게 돼요. 확신하고 맞히면 경험치를 더 받고, 연속으로 맞히면 콤보 보너스가 붙어요.</p>
+    <div class="subs" role="group" aria-label="하위 주제">${SUBS[cat].map(s => `<button class="subchip" data-sub="${s.k}" aria-pressed="${s.k === sk}">${esc(s.name)}${s.k === weekly ? ' <small>이번 주</small>' : ''}</button>`).join('')}</div>
+    <h2>${sub.k !== 'base' ? `이번엔 ${esc(sub.name)}` : c.timed ? (cat === 'logic' ? '짧은 시간에 논리를 끝까지 밀고 가 보세요' : '감으로 먼저 답하고, 근거로 확인해 보세요') : '먼저 풀고, 그다음에 배웁니다'}</h2>
+    <p class="lead">${esc(sub.k === 'base' ? c.desc : sub.desc)}. 5문항을 풀 때마다 얼마나 확신하는지도 고르게 돼요. 확신하고 맞히면 경험치를 더 받고, 연속으로 맞히면 콤보 보너스가 붙어요.</p>
+    ${sub.k !== 'base' ? '<p class="hint">"기본 문제로 풀기"는 기초 주제 문제만 있어요. 이 주제 문제는 Claude가 출제해요.</p>' : ''}
     ${doneCount ? `<p class="status">오늘 이 분야를 ${doneCount}번 풀었어요.</p>` : ''}
     ${note ? `<p class="status">${esc(note)}</p>` : ''}
     <div class="conf"><div class="row">
@@ -579,11 +641,13 @@ async function renderHome(note = '') {
   if (saved) $('#go-saved').onclick = () => start(cat, saved, 'claude');
   if (sample) $('#go-gen').onclick = () => generate(cat, !!saved);
   $('#go-bank').onclick = () => start(cat, { items: BANK[cat].items.map(shuffleChoices), deep: BANK[cat].deep }, 'bank');
+  document.querySelectorAll('.subchip').forEach(b => b.onclick = () => { subPick[cat] = b.dataset.sub; renderHome(); });
 }
 
 // ───────── 화면: 문제 ─────────
 function start(cat, quiz, source, note = '') {
   Object.assign(state, { view: 'quiz', cat, quiz, source, idx: 0, answers: [], picked: null, deepDone: null, combo: 0, xpGain: 0, gain: null, sessionId: `${TODAY}-${cat}-${Date.now().toString(36)}` });
+  state.sub = source === 'bank' ? 'base' : (quiz.sub || curSub(cat));
   if (note) state.note = note; else state.note = '';
   renderQuestion();
 }
@@ -595,7 +659,7 @@ function renderQuestion() {
   const n = quiz.items.length;
   $('#main').innerHTML = `<section class="sheet">
     ${state.note ? `<p class="status">${esc(state.note)}</p>` : ''}
-    <div class="eyebrow"><span class="chip"><i style="background:var(--c-${cat})"></i>${esc(c.name)}</span><span>${idx + 1} / ${n}</span><span>· ${esc(it.topic)}</span>${state.source === 'claude' ? '<span>· Claude 출제</span>' : ''}${c.timed ? `<span class="timer" id="timer">${SECONDS}s</span>` : ''}</div>
+    <div class="eyebrow"><span class="chip"><i style="background:var(--c-${cat})"></i>${esc(c.name)}${state.sub && state.sub !== 'base' ? ' · ' + esc(subOf(cat, state.sub).name) : ''}</span><span>${idx + 1} / ${n}</span><span>· ${esc(it.topic)}</span>${state.source === 'claude' ? '<span>· Claude 출제</span>' : ''}${c.timed ? `<span class="timer" id="timer">${SECONDS}s</span>` : ''}</div>
     <div class="bar"><span style="width:${idx / n * 100}%"></span></div>
     <p class="q">${esc(it.q)}</p>
     <div id="answer">${it.type === 'mc'
@@ -726,7 +790,7 @@ async function finish() {
   if (perfect) parts.push(['만점 보너스', 20]);
   if (firstToday) parts.push(['오늘 첫 세트', 10]);
   const xp = parts.reduce((t, [, v]) => t + v, 0);
-  const sess = { id: state.sessionId, date: TODAY, at: Date.now(), cat: state.cat, source: state.source, score, total: a.length, xp,
+  const sess = { id: state.sessionId, date: TODAY, at: Date.now(), cat: state.cat, sub: state.sub || 'base', source: state.source, score, total: a.length, xp,
     results: a.map(x => ({ topic: x.topic, correct: x.correct, conf: x.conf, secs: x.secs })) };
   sessions.push(sess);
   let saveNote = '';
@@ -831,9 +895,11 @@ function renderStats() {
     </div>
     <h3 style="margin:0;font:600 15px var(--f-body)">분야별 정답률</h3>
     <div class="catbars">${byCat.map(b => `<div class="catbar"><span>${esc(CATS[b.k].name)}</span><div class="track"><span style="width:${b.pct ?? 0}%;background:var(--c-${b.k})"></span></div><span class="v">${b.pct == null ? '-' : b.pct + '%'}</span></div>`).join('')}</div>
+    <h3 style="margin:0;font:600 15px var(--f-body)">하위 주제 ${subsTried()} / ${Object.values(SUBS).flat().length}</h3>
+    <div class="subgrid">${Object.keys(CATS).map(k => `<div class="subrow"><span class="sublabel"><i style="background:var(--c-${k})"></i>${esc(CATS[k].name)}</span><span class="subcells">${SUBS[k].map(s => { const ss = sessions.filter(x => x.cat === k && (x.sub || 'base') === s.k); const t = ss.reduce((a, x) => a + x.total, 0), r = ss.reduce((a, x) => a + x.score, 0); return `<span class="subcell ${t ? '' : 'empty'}">${esc(s.name)} <b>${t ? Math.round(r / t * 100) + '%' : '아직'}</b></span>`; }).join('')}</span></div>`).join('')}</div>
     ${wrong.length ? `<h3 style="margin:0;font:600 15px var(--f-body)">최근 틀린 주제</h3><p class="lead">${wrong.map(esc).join(' · ')}</p><p class="hint">Claude가 출제할 때 이 주제들과 연결된 개념을 다시 물어봐요.</p>` : ''}
     <h3 style="margin:0;font:600 15px var(--f-body)">최근 풀이</h3>
-    ${recent.length ? `<div class="hist">${recent.map(s => `<div><span>${esc(s.date)}</span><span>${esc(CATS[s.cat]?.name || s.cat)}${s.source === 'claude' ? ' · Claude 출제' : ''}</span><span>${s.score}/${s.total}${s.deepScore != null ? ` · 서술 ${s.deepScore}/3` : ''}</span></div>`).join('')}</div>` : '<p class="lead">아직 기록이 없어요. 오늘의 문제를 풀면 여기에 쌓여요.</p>'}
+    ${recent.length ? `<div class="hist">${recent.map(s => `<div><span>${esc(s.date)}</span><span>${esc(CATS[s.cat]?.name || s.cat)}${s.sub && s.sub !== 'base' && SUBS[s.cat] ? ' · ' + esc(subOf(s.cat, s.sub).name) : ''}${s.source === 'claude' ? ' · Claude 출제' : ''}</span><span>${s.score}/${s.total}${s.deepScore != null ? ` · 서술 ${s.deepScore}/3` : ''}</span></div>`).join('')}</div>` : '<p class="lead">아직 기록이 없어요. 오늘의 문제를 풀면 여기에 쌓여요.</p>'}
   </section>`;
 }
 
