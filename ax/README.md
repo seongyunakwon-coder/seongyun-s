@@ -4,11 +4,13 @@
 
 | # | 폴더 | 무엇을 하나 | 온라인 버전 |
 |---|---|---|---|
-| 1 | [01-youtube-player](01-youtube-player/) | 좋아하는 아이돌·인플루언서 영상을 내 취향 가중치에 따라 자동으로 골라 연속 재생 | (로컬 전용) |
+| 1 | [01-youtube-player](01-youtube-player/) | 좋아하는 아이돌·인플루언서 영상을 내 취향 가중치에 따라 자동으로 골라 연속 재생 | [취향 이어보기 (폰용)](https://claude.ai/artifact/VBtN9P3dfaL7CMRGmFBiyj) |
 | 2 | [02-picture-books](02-picture-books/) | 긴 소설을 그림책으로 줄여 흥미를 붙이고, 1주·2주·한 달 완독 플랜으로 실제 완독까지 | [그림책 서재](https://claude.ai/artifact/WG9vMnh5TDzGf58jxhbwmd) |
 | 3 | [03-daily-quiz](03-daily-quiz/) | 요일마다 분야가 바뀌는 대학 교양 수준 퀴즈. 먼저 풀고, 해설과 미니 강의로 배우기 | [매일 교양 퀴즈](https://claude.ai/artifact/8HT6r5giNPy2kCJ1ATW8QZ) |
 
-온라인 버전 링크는 비공개 아티팩트라 공유 설정 전에는 본인만 열 수 있습니다.
+온라인 버전 링크는 비공개 아티팩트라 공유 설정 전에는 본인만 열 수 있습니다. 폰에서는 Claude 앱이나 claude.ai에 같은 계정으로 로그인한 브라우저에서 열면 됩니다.
+
+1번의 PC용 `index.html`은 화면 안에서 영상을 바로 재생하지만 로컬 서버가 필요합니다. 아티팩트에서는 유튜브를 페이지 안에 넣을 수 없어서, 폰용 `mobile.html`은 고른 영상 최대 50개를 유튜브 재생목록으로 만들어 유튜브 앱·브라우저에서 이어 틉니다. 사람 목록과 프로필은 두 페이지가 `data.js`를 함께 씁니다.
 
 ## 로컬에서 실행
 

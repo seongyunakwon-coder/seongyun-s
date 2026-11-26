@@ -1,0 +1,155 @@
+<title>취향 이어보기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Do+Hyeon&display=swap">
+<style>
+/* Layout: 폰 한 손 화면. 맨 위 큰 "섞어서 이어보기" 버튼, 아래로 사람 카드가 쌓임 */
+:root {
+  --bg: #f4f2f5; --card: #ffffff; --fg: #1d1a22; --muted: #6c6675; --line: #e2dde6;
+  --accent: #d6336c; --rec: #b07d12; --rec-bg: #fbf1d9;
+  --f-head: "Do Hyeon", "Gowun Dodum", system-ui, sans-serif;
+  --f-body: "Gowun Dodum", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121015; --card: #1c1920; --fg: #eeeaf2; --muted: #9a93a3; --line: #2e2a34; --accent: #ff6b9a; --rec: #f0c64a; --rec-bg: #2f2814; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #121015; --card: #1c1920; --fg: #eeeaf2; --muted: #9a93a3; --line: #2e2a34; --accent: #ff6b9a; --rec: #f0c64a; --rec-bg: #2f2814; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 560px; margin: 0 auto; padding-block: 16px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 14px; }
+h1 { margin: 0; font: 400 28px var(--f-head); }
+.lead { margin: 0; color: var(--muted); font-size: 14px; }
+.play { display: grid; gap: 6px; background: var(--accent); color: #fff; text-decoration: none; border-radius: 16px; padding: 18px; }
+.play b { font: 400 24px var(--f-head); }
+.play span { font-size: 13px; opacity: .9; }
+.play:active { transform: scale(.99); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 999px; padding: 6px 12px; font: 14px var(--f-body); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+.card.off { opacity: .5; }
+.top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.top h2 { margin: 0; font: 400 21px var(--f-head); }
+.badge { font-size: 12px; background: var(--rec-bg); color: var(--rec); border-radius: 6px; padding: 1px 7px; }
+.weight { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.why { margin: 0; font-size: 13px; color: var(--rec); }
+dl { margin: 0; display: grid; grid-template-columns: 92px 1fr; gap: 3px 10px; font-size: 14px; }
+dt { color: var(--muted); }
+dd { margin: 0; min-width: 0; }
+.na { color: var(--muted); }
+.desc { margin: 0; font-size: 14px; }
+.src { margin: 0; font-size: 12px; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 10px; padding: 8px 12px; font: 14px var(--f-body); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.btn.go { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:4px">
+    <h1>취향 이어보기</h1>
+    <p class="lead">고른 사람들의 영상을 취향 가중치대로 섞어 유튜브에서 이어서 틀어 줘요.</p>
+  </header>
+
+  <a class="play" id="play" href="#" target="_blank" rel="noopener">
+    <b>▶ 섞어서 이어보기</b>
+    <span id="play-sub">불러오는 중</span>
+  </a>
+
+  <div class="row" id="filter" role="group" aria-label="보기">
+    <button class="chip" data-f="all" aria-pressed="true">전체</button>
+    <button class="chip" data-f="fav" aria-pressed="false">원래 5명</button>
+    <button class="chip" data-f="rec" aria-pressed="false">추천</button>
+  </div>
+
+  <div id="cards" style="display:grid;gap:12px"></div>
+
+  <p class="note">유튜브 앱이나 브라우저에서 최대 50개짜리 재생목록으로 열려요. 👍/👎는 그 사람이 나오는 비율을 바꾸고, 이 폰에만 저장돼요. 나이는 오늘 기준 만 나이예요.</p>
+</div>
+
+<script src="data.js"></script>
+<script>
+const KEY = 'ytmobile-v1', MAX = 50;
+let pref = {};
+try { pref = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
+pref.weight ??= {}; pref.off ??= {};
+const startWeight = k => PEOPLE[k].rec ? 0.6 : 1;
+for (const k in PEOPLE) pref.weight[k] ??= startWeight(k);
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pref)); } catch {} };
+let filter = 'all';
+
+// 사람 가중치대로 영상 몇 개씩 뽑을지 나눈 뒤 섞기
+function shuffled(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function mix(keys) {
+  const total = keys.reduce((s, k) => s + pref.weight[k], 0) || 1;
+  const picks = [];
+  for (const k of keys) {
+    const n = Math.max(1, Math.round(MAX * pref.weight[k] / total));
+    picks.push(...shuffled(PEOPLE[k].ids).slice(0, n));
+  }
+  return shuffled(picks).slice(0, MAX);
+}
+const listUrl = ids => 'https://www.youtube.com/watch_videos?video_ids=' + ids.join(',');
+
+function active() { return Object.keys(PEOPLE).filter(k => !pref.off[k]); }
+function refreshPlay() {
+  const keys = active();
+  const a = document.getElementById('play');
+  a.href = listUrl(mix(keys.length ? keys : Object.keys(PEOPLE)));
+  document.getElementById('play-sub').textContent = keys.length ? `${keys.length}명 · 최대 ${MAX}개 · 누를 때마다 새로 섞여요` : '모두 꺼져 있어 전체에서 섞어요';
+}
+document.getElementById('play').addEventListener('click', () => setTimeout(refreshPlay, 300));
+
+const na = '<span class="na">공개 정보 없음</span>';
+function card(k) {
+  const P = PEOPLE[k], p = PROFILES[k] || {}, age = ageOf(p.birth);
+  const el = document.createElement('section');
+  el.className = 'card' + (pref.off[k] ? ' off' : '');
+  el.innerHTML = `
+    <div class="top"><h2>${P.name}</h2>${P.rec ? '<span class="badge">추천</span>' : ''}<span class="weight">비율 ×${pref.weight[k].toFixed(1)}</span></div>
+    ${P.rec ? `<p class="why">${P.why}</p>` : ''}
+    <dl>
+      <dt>본명</dt><dd>${p.real || na}</dd>
+      <dt>활동</dt><dd>${p.role || na}</dd>
+      <dt>국적</dt><dd>${p.nation || na}</dd>
+      <dt>생년월일</dt><dd>${p.birth ? `${p.birth} · 만 ${age}세` : na}</dd>
+    </dl>
+    ${p.desc ? `<p class="desc">${p.desc}</p>` : ''}
+    ${p.src ? `<p class="src">출처: ${p.src}</p>` : ''}
+    <div class="actions">
+      <a class="btn go" href="${listUrl(shuffled(P.ids).slice(0, MAX))}" target="_blank" rel="noopener">▶ 이 사람만</a>
+      <button class="btn" data-act="up">👍 더 자주</button>
+      <button class="btn" data-act="down">👎 덜 자주</button>
+      <button class="btn" data-act="toggle">${pref.off[k] ? '다시 켜기' : '끄기'}</button>
+    </div>`;
+  el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+    const a = b.dataset.act;
+    if (a === 'up') pref.weight[k] = Math.min(5, pref.weight[k] + 0.3);
+    if (a === 'down') pref.weight[k] = Math.max(0.2, pref.weight[k] - 0.2);
+    if (a === 'toggle') pref.off[k] = !pref.off[k];
+    save(); render();
+  });
+  return el;
+}
+function render() {
+  const box = document.getElementById('cards'); box.innerHTML = '';
+  for (const k in PEOPLE) {
+    if (filter === 'fav' && PEOPLE[k].rec) continue;
+    if (filter === 'rec' && !PEOPLE[k].rec) continue;
+    box.appendChild(card(k));
+  }
+  refreshPlay();
+}
+document.querySelectorAll('#filter .chip').forEach(c => c.onclick = () => {
+  filter = c.dataset.f;
+  document.querySelectorAll('#filter .chip').forEach(x => x.setAttribute('aria-pressed', x === c));
+  render();
+});
+render();
+</script>
