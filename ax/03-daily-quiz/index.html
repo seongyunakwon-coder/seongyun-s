@@ -1,0 +1,649 @@
+<title>매일 교양 퀴즈</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 하루 한 장의 시험지. 위에 요일별 시간표, 가운데 한 문항씩, 풀고 나면 해설과 미니 강의가 펼쳐짐 */
+:root {
+  --bg: #f1f3f0;
+  --paper: #ffffff;
+  --ink: #18212b;
+  --muted: #5b6670;
+  --line: #d9dfdc;
+  --accent: #2c5d8f;
+  --good: #2f7d4f;
+  --bad: #b5443a;
+  --soft: #e7ecef;
+  --c-sci: #3a8fb7; --c-pol: #8a6bb8; --c-lang: #c27b2e; --c-art: #c0567d; --c-econ: #4e9a6a; --c-intuit: #d0a321; --c-logic: #5b7fd6;
+  --f-display: "Hahmlet", "Nanum Myeongjo", serif;
+  --f-body: "IBM Plex Sans KR", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171c; --paper: #1a2128; --ink: #e6eaec; --muted: #98a4ad; --line: #2c3640; --accent: #7fb0e0; --good: #6cc28f; --bad: #ef8a7e; --soft: #222b33; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #12171c; --paper: #1a2128; --ink: #e6eaec; --muted: #98a4ad; --line: #2c3640; --accent: #7fb0e0; --good: #6cc28f; --bad: #ef8a7e; --soft: #222b33; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--f-body); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 18px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px; }
+header h1 { margin: 0; font: 700 26px var(--f-display); letter-spacing: -.01em; }
+.meta { display: flex; gap: 14px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meta b { color: var(--ink); }
+.tabs { display: flex; gap: 4px; }
+.tabs button { border: 0; background: transparent; padding: 6px 10px; border-radius: 8px; color: var(--muted); }
+.tabs button[aria-pressed="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
+
+/* 요일 시간표 */
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.day { border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 2px; min-width: 0; }
+.day .dw { font-size: 12px; color: var(--muted); }
+.day .dn { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day .dot { width: 8px; height: 8px; border-radius: 50%; margin: 2px auto 0; }
+.day[aria-current="true"] { border-color: var(--ink); border-width: 2px; padding: 7px 3px; }
+.day.done .dot { box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px currentColor; }
+
+.sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 16px; min-width: 0; }
+.eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--ink); }
+.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+h2 { margin: 0; font: 700 clamp(22px, 4vw, 28px)/1.35 var(--f-display); text-wrap: balance; }
+.q { margin: 0; font: 500 clamp(19px, 3.4vw, 22px)/1.55 var(--f-display); text-wrap: pretty; }
+p { margin: 0; }
+.lead { color: var(--muted); max-width: 60ch; }
+
+.choices { display: grid; gap: 8px; }
+.choice { text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; }
+.choice .k { font-family: var(--f-mono); color: var(--muted); }
+.choice:hover:not(:disabled) { border-color: var(--accent); }
+.choice[aria-pressed="true"] { border-color: var(--accent); background: var(--soft); }
+.choice.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--paper)); }
+.choice.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--paper)); }
+.choice:disabled { cursor: default; }
+.est { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.est input { font: 500 20px var(--f-mono); padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); width: min(100%, 260px); }
+.hint { font-size: 13px; color: var(--muted); }
+
+.conf { display: grid; gap: 8px; }
+.conf .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 10px 16px; font-weight: 500; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--accent); padding-inline: 4px; }
+
+.timer { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; margin-left: auto; }
+.timer.low { color: var(--bad); }
+.bar { height: 4px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+
+.verdict { font-weight: 600; font-size: 17px; }
+.verdict.ok { color: var(--good); } .verdict.no { color: var(--bad); }
+.explain { display: grid; gap: 12px; border-top: 1px dashed var(--line); padding-top: 14px; }
+.learn { background: var(--soft); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
+.learn h3, .steps h3, .deep h3 { margin: 0; font: 600 14px var(--f-body); letter-spacing: .04em; color: var(--muted); }
+.steps ol { margin: 6px 0 0; padding-left: 1.4em; display: grid; gap: 4px; }
+.steps li[hidden] { display: none; }
+
+/* 결과 */
+.score { display: flex; flex-wrap: wrap; gap: 20px; align-items: baseline; }
+.score .big { font: 700 48px var(--f-display); font-variant-numeric: tabular-nums; }
+.score .big small { font-size: 22px; color: var(--muted); }
+.flags { display: grid; gap: 8px; }
+.flag { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 70px 1fr; gap: 10px; min-width: 0; }
+.flag .tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 6px; align-self: start; text-align: center; }
+.flag .tag.illusion { background: color-mix(in srgb, var(--bad) 16%, var(--paper)); color: var(--bad); }
+.flag .tag.lucky { background: color-mix(in srgb, var(--c-intuit) 22%, var(--paper)); color: var(--ink); }
+.flag .tag.solid { background: color-mix(in srgb, var(--good) 16%, var(--paper)); color: var(--good); }
+.flag .tag.gap { background: var(--soft); color: var(--muted); }
+.deep textarea { width: 100%; min-height: 120px; font: inherit; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); resize: vertical; }
+.deep { display: grid; gap: 10px; }
+.feedback { background: var(--soft); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+
+/* 기록 */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.stat .n { font: 700 26px var(--f-display); font-variant-numeric: tabular-nums; }
+.stat .l { font-size: 13px; color: var(--muted); }
+.catbars { display: grid; gap: 8px; }
+.catbar { display: grid; grid-template-columns: 92px 1fr 54px; gap: 10px; align-items: center; font-size: 14px; }
+.catbar .track { height: 10px; background: var(--soft); border-radius: 5px; overflow: hidden; }
+.catbar .track span { display: block; height: 100%; border-radius: 5px; }
+.catbar .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.hist { display: grid; gap: 6px; font-size: 14px; }
+.hist div { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.hist span:last-child { font-variant-numeric: tabular-nums; }
+.status { font-size: 14px; color: var(--muted); }
+.status.err { color: var(--bad); }
+.loading { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.loading::before { content: ""; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loading::before { animation: none; } .bar > span { transition: none; } }
+@media (max-width: 480px) { .sheet { padding: 16px; } .day .dn { font-size: 11px; } .catbar { grid-template-columns: 76px 1fr 44px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>매일 교양 퀴즈</h1>
+    <div class="tabs" role="group" aria-label="화면">
+      <button id="tab-today" aria-pressed="true">오늘</button>
+      <button id="tab-stats" aria-pressed="false">내 기록</button>
+    </div>
+  </header>
+  <div class="meta" id="meta"></div>
+  <div class="week" id="week" aria-label="요일별 분야"></div>
+  <main id="main"></main>
+</div>
+
+<script>
+// ───────── 분야와 요일 ─────────
+const CATS = {
+  sci:    { name: '과학',        desc: '물리·화학·생명과학·지구과학의 핵심 개념과 원리' },
+  pol:    { name: '정치·사회',   desc: '국내외 정치 제도, 정치사상, 국제관계, 사회학의 기본 개념. 특정 정당이나 현역 정치인 평가 없이 중립적으로' },
+  lang:   { name: '언어·철학',   desc: '언어학, 한국어 규범, 논리학, 동서양 철학 사상' },
+  art:    { name: '예술·역사',   desc: '미술사, 음악사, 문학, 세계사와 한국사의 주요 흐름' },
+  econ:   { name: '경제',        desc: '미시·거시경제 기본 개념, 경제사, 행동경제학' },
+  intuit: { name: '직관 훈련',   desc: '페르미 추정, 확률·통계 직관, 인지 편향. 빠르게 감을 잡고 근거를 따져 보는 연습', timed: true },
+  logic:  { name: '논리 스프린트', desc: '삼단논법, 조건문, 수열, 참·거짓 퍼즐 등 짧은 시간에 논리를 전개하는 문제', timed: true },
+};
+const WEEK = ['logic', 'sci', 'pol', 'lang', 'art', 'econ', 'intuit']; // 일~토
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+const SECONDS = 60;
+
+// ───────── 기본 문제 (Claude 출제를 쓸 수 없을 때) ─────────
+const BANK = {
+  sci: { items: [
+    { type: 'mc', topic: '빛의 산란', q: '맑은 날 하늘이 파랗게 보이는 주된 이유는?', choices: ['바다의 색이 하늘에 반사되어서', '짧은 파장의 빛이 공기 분자에 더 강하게 산란되어서', '오존층이 붉은빛을 흡수해서', '대기 중 수증기가 파란색이어서'], answer: 1,
+      explain: '레일리 산란의 세기는 파장의 네제곱에 반비례합니다. 파장이 짧은 파란빛이 붉은빛보다 훨씬 많이 흩어져 하늘 전체에서 우리 눈으로 들어옵니다.',
+      learn: '같은 원리로 해질녘에는 빛이 대기를 길게 통과하면서 파란빛이 대부분 흩어져 나가고, 남은 붉은빛이 하늘을 물들입니다. 구름이 하얀 것은 물방울이 빛의 파장보다 커서 모든 색을 비슷하게 산란하는 미 산란 때문입니다. 산란 개념은 레이더, 의료 영상, 대기 오염 측정에도 쓰입니다.' },
+    { type: 'mc', topic: '열역학 제2법칙', q: '외부와 에너지·물질을 주고받지 않는 고립계의 엔트로피는 시간이 지나면 어떻게 되는가?', choices: ['반드시 줄어든다', '항상 일정하다', '줄어들지 않는다(같거나 늘어난다)', '주기적으로 늘었다 줄었다 한다'], answer: 2,
+      explain: '열역학 제2법칙에 따르면 고립계의 엔트로피는 감소하지 않습니다. 가역 과정이면 그대로, 실제의 비가역 과정에서는 증가합니다.',
+      learn: '엔트로피는 흔히 무질서도로 설명되지만, 더 정확히는 같은 거시 상태를 만드는 미시 상태의 수와 관련됩니다(볼츠만, S = k log W). 냉장고처럼 국소적으로 엔트로피를 낮추는 장치는 외부로 더 많은 엔트로피를 내보냅니다. 생명체도 마찬가지로 먹고 열을 내보내며 질서를 유지합니다.' },
+    { type: 'mc', topic: 'mRNA 백신', q: 'mRNA 백신의 작동 방식으로 옳은 것은?', choices: ['약하게 만든 바이러스를 주입한다', '세포가 항원 단백질을 잠깐 만들도록 설계도를 전달한다', '사람의 DNA를 바꿔 면역을 영구히 만든다', '항체를 직접 주입한다'], answer: 1,
+      explain: 'mRNA는 세포질에서 리보솜에 의해 단백질로 번역된 뒤 분해됩니다. 핵 안의 DNA에 들어가지 않으며, 만들어진 항원 단백질을 보고 면역계가 학습합니다.',
+      learn: '분자생물학의 중심 원리는 DNA → RNA → 단백질의 정보 흐름입니다. mRNA는 그중 단백질 설계도를 나르는 전령입니다. 불안정한 mRNA를 지질 나노입자로 감싸 세포까지 보내는 기술이 실용화의 열쇠였고, 이 연구로 카리코와 와이스먼이 2023년 노벨 생리의학상을 받았습니다.' },
+    { type: 'mc', topic: '상대성이론', q: 'GPS 위성의 시계를 보정해야 하는 이유와 가장 관련 깊은 것은?', choices: ['뉴턴의 만유인력 법칙만', '특수·일반 상대성이론의 시간 효과', '양자 얽힘', '도플러 효과만'], answer: 1,
+      explain: '빠르게 움직이는 위성 시계는 특수상대성이론에 따라 느려지고, 중력이 약한 높은 궤도에서는 일반상대성이론에 따라 빨라집니다. 합치면 하루 약 38마이크로초가 빨라져 보정하지 않으면 위치 오차가 하루 수 km씩 쌓입니다.',
+      learn: '특수상대성이론(1905)은 빛의 속도가 모든 관성 관찰자에게 같다는 데서 출발해 시간과 공간이 관찰자에 따라 달라짐을 보였습니다. 일반상대성이론(1915)은 중력을 시공간의 휘어짐으로 설명합니다. 일상에서 상대성이론이 실제로 쓰이는 대표 사례가 GPS입니다.' },
+    { type: 'mc', topic: '판 구조론', q: '히말라야산맥이 만들어진 원인으로 가장 알맞은 것은?', choices: ['화산 분화가 쌓여서', '인도판과 유라시아판이 충돌해서', '빙하가 땅을 깎아서', '해저가 갈라지며 솟아서'], answer: 1,
+      explain: '인도판이 북쪽으로 이동해 유라시아판과 충돌하면서 지각이 밀려 올라갔고, 지금도 조금씩 높아지고 있습니다.',
+      learn: '판 구조론은 지구 겉면이 여러 판으로 나뉘어 맨틀 위를 천천히 움직인다는 이론입니다. 판이 멀어지는 곳에서는 해령, 부딪치는 곳에서는 습곡산맥이나 해구, 어긋나는 곳에서는 변환단층이 생깁니다. 베게너의 대륙이동설에서 시작해 1960년대 해저 확장 증거로 완성되었습니다.' },
+  ], deep: { q: '엔트로피 증가 법칙이 있는데도 생명체가 질서 있는 구조를 유지할 수 있는 이유를 설명해 보세요.', answer: '생명체는 고립계가 아니라 열린계입니다. 음식이나 햇빛으로 질서도가 높은(엔트로피가 낮은) 에너지를 받아들이고, 열과 노폐물로 더 많은 엔트로피를 바깥에 내보냅니다. 그래서 몸 안의 엔트로피는 낮게 유지되지만, 생명체와 환경을 합친 전체 엔트로피는 증가합니다. 제2법칙은 깨지지 않습니다.' } },
+
+  pol: { items: [
+    { type: 'mc', topic: '삼권분립', q: '권력을 입법·행정·사법으로 나누어 서로 견제해야 한다고 주장한 『법의 정신』의 저자는?', choices: ['존 로크', '몽테스키외', '장 자크 루소', '토머스 홉스'], answer: 1,
+      explain: '몽테스키외는 1748년 『법의 정신』에서 권력이 한곳에 모이면 자유가 사라진다며 세 권력의 분리와 견제를 주장했습니다.',
+      learn: '로크는 입법권과 집행권의 구분을, 몽테스키외는 사법권을 더해 세 권력의 균형을 강조했습니다. 미국 헌법은 이 사상을 가장 충실하게 제도화한 예로, 대통령의 거부권, 의회의 탄핵권, 법원의 위헌심사권이 서로 견제합니다. 한국 헌법도 같은 원리를 따릅니다.' },
+    { type: 'mc', topic: '선거제도', q: '한 선거구에서 1등만 당선되는 단순다수 소선거구제가 양당제로 이어지기 쉽다는 경향을 가리키는 말은?', choices: ['듀베르제의 법칙', '파레토 법칙', '그레셤의 법칙', '파킨슨의 법칙'], answer: 0,
+      explain: '프랑스 정치학자 모리스 듀베르제가 정리했습니다. 3위 이하 정당은 의석을 얻기 어렵고, 유권자도 사표를 피하려 큰 정당에 표를 몰아주기 때문입니다.',
+      learn: '반대로 비례대표제는 득표율에 맞춰 의석을 나누므로 다당제로 이어지기 쉽습니다. 각 제도에는 장단점이 있습니다. 소선거구제는 책임 소재가 분명하고 정부가 안정적인 반면 표의 비례성이 낮고, 비례대표제는 다양한 목소리를 담지만 연립 협상이 길어질 수 있습니다. 한국은 두 방식을 섞은 혼합형을 씁니다.' },
+    { type: 'mc', topic: '국제기구', q: '유엔 안전보장이사회의 상임이사국이 아닌 나라는?', choices: ['프랑스', '중국', '독일', '러시아'], answer: 2,
+      explain: '상임이사국은 미국, 영국, 프랑스, 러시아, 중국 5개국이며 모두 거부권을 가집니다. 독일은 상임이사국이 아닙니다.',
+      learn: '상임이사국 구성은 1945년 제2차 세계대전 승전국 질서를 반영합니다. 그래서 일본, 독일, 인도, 브라질 등이 개편을 요구해 왔지만, 개편 자체에 상임이사국 동의가 필요해 쉽게 바뀌지 않습니다. 비상임이사국 10개국은 2년 임기로 총회에서 선출됩니다.' },
+    { type: 'mc', topic: '정부 형태', q: '의원내각제의 특징으로 옳은 것은?', choices: ['행정부 수반을 국민이 직접 선출한다', '의회가 내각 불신임을 의결할 수 있다', '행정부와 입법부가 엄격히 분리된다', '대통령이 의회를 해산할 수 없다'], answer: 1,
+      explain: '내각제에서 내각은 의회 다수의 신임에 기반하므로 의회가 불신임하면 물러나야 하고, 반대로 내각은 의회를 해산해 선거를 다시 치를 수 있습니다.',
+      learn: '영국, 독일, 일본이 대표적 내각제 국가이고, 미국은 대통령제, 프랑스는 대통령과 총리가 함께 있는 이원집정부제입니다. 한국은 대통령제를 기본으로 하면서 국무총리, 국무회의 같은 내각제 요소도 일부 갖고 있습니다.' },
+    { type: 'mc', topic: '사회계약론', q: '자연 상태를 "만인의 만인에 대한 투쟁"으로 보고 강력한 국가의 필요성을 주장한 사상가는?', choices: ['토머스 홉스', '존 로크', '애덤 스미스', '존 스튜어트 밀'], answer: 0,
+      explain: '홉스는 『리바이어던』(1651)에서 질서가 없는 자연 상태의 불안을 끝내려면 사람들이 권리를 주권자에게 넘기는 계약이 필요하다고 보았습니다.',
+      learn: '사회계약론의 세 사상가는 자연 상태를 다르게 봅니다. 홉스는 투쟁 상태로 보아 강한 주권을, 로크는 비교적 평화롭지만 불안정한 상태로 보아 생명·자유·재산을 지키는 제한 정부와 저항권을, 루소는 일반의지에 따른 인민주권을 강조했습니다.' },
+  ], deep: { q: '단순다수 소선거구제와 비례대표제 중 하나를 고르고, 그 장점과 약점을 한 가지씩 설명해 보세요.', answer: '소선거구제는 지역 대표성과 책임 소재가 분명하고 단독 정부가 나오기 쉬워 안정적입니다. 대신 낙선자에게 간 표가 사표가 되어 득표율과 의석 비율이 어긋납니다. 비례대표제는 득표율이 의석에 그대로 반영돼 소수 의견도 대표되지만, 다당제로 연립 정부가 잦아 정책 결정이 느려지고 지역 대표성이 약해질 수 있습니다.' } },
+
+  lang: { items: [
+    { type: 'mc', topic: '맞춤법', q: '다음 중 맞춤법에 맞는 것은?', choices: ['그러면 안 되요', '그러면 안 돼요', '그러면 않 돼요', '그러면 않 되요'], answer: 1,
+      explain: '"돼"는 "되어"의 준말입니다. "되어요"로 바꿔 말이 되면 "돼요"를 씁니다. 부정의 "안"은 "아니"의 준말이라 띄어 씁니다.',
+      learn: '"되/돼" 구별은 "하/해"를 넣어 보면 쉽습니다. "하"가 어울리면 "되", "해"가 어울리면 "돼"입니다(안 해요 → 안 돼요). "안"과 "않"은 "아니"와 "아니하"의 준말로, "않"은 "-지 않다"처럼 용언 뒤에 옵니다.' },
+    { type: 'mc', topic: '구조주의 언어학', q: '소쉬르가 말한 언어 기호의 "자의성"이란?', choices: ['말소리와 뜻 사이에 필연적 관계가 없다는 것', '사람마다 단어 뜻을 마음대로 바꿀 수 있다는 것', '문법이 시대마다 달라진다는 것', '의성어가 언어의 기원이라는 것'], answer: 0,
+      explain: '"나무"라는 소리(기표)와 나무라는 개념(기의) 사이에 자연스러운 연결은 없습니다. 그래서 언어마다 같은 대상을 tree, arbre처럼 다르게 부릅니다.',
+      learn: '소쉬르는 언어를 사회적 약속 체계(랑그)와 개인의 실제 발화(파롤)로 나누고, 단어의 의미는 다른 단어와의 차이에서 생긴다고 보았습니다. 이 생각은 레비스트로스의 인류학, 바르트의 기호학 등 20세기 구조주의 전반에 큰 영향을 주었습니다.' },
+    { type: 'mc', topic: '논리적 오류', q: '"채식이 좋다고? 그럼 고기 먹는 사람은 다 나쁘다는 거야?"처럼 상대 주장을 약하게 바꿔 공격하는 오류는?', choices: ['인신공격의 오류', '허수아비 논증', '순환논증', '성급한 일반화'], answer: 1,
+      explain: '상대가 하지 않은 극단적 주장을 만들어 놓고 그것을 반박하는 것이 허수아비 논증입니다.',
+      learn: '대표적인 비형식적 오류로는 사람을 공격하는 인신공격, 결론을 전제에 숨기는 순환논증, 적은 사례로 일반화하는 성급한 일반화, 둘 중 하나만 있다고 몰아가는 흑백논리 등이 있습니다. 토론에서 상대 주장을 가장 강한 형태로 재구성하는 "스틸맨" 연습이 좋은 처방입니다.' },
+    { type: 'mc', topic: '언어와 사고', q: '사용하는 언어가 사고방식과 세계 인식에 영향을 준다는 가설은?', choices: ['보편문법 가설', '사피어-워프 가설', '결정적 시기 가설', '튜링 테스트'], answer: 1,
+      explain: '에드워드 사피어와 벤저민 리 워프의 이름을 딴 가설입니다. 오늘날에는 언어가 사고를 결정한다는 강한 형태보다 영향을 준다는 약한 형태가 주로 받아들여집니다.',
+      learn: '예를 들어 방향을 동서남북 절대 좌표로만 말하는 언어 사용자는 방향 감각이 뛰어나다는 연구가 있습니다. 반면 촘스키는 모든 인간이 타고난 공통 문법 능력을 가졌다는 보편문법을 주장해, 언어 간 차이보다 공통점을 강조했습니다.' },
+    { type: 'mc', topic: '철학 사상', q: '"나는 생각한다, 그러므로 나는 존재한다"는 말로 근대 철학을 연 사람은?', choices: ['칸트', '데카르트', '흄', '플라톤'], answer: 1,
+      explain: '데카르트는 모든 것을 의심해도 의심하는 자신은 의심할 수 없다는 점에서 확실한 출발점을 찾았습니다.',
+      learn: '데카르트는 이성을 지식의 근거로 삼는 합리론을, 로크와 흄은 경험을 근거로 삼는 경험론을 대표합니다. 칸트는 두 흐름을 종합해 경험 없이는 내용이 없고, 이성의 틀 없이는 경험을 정리할 수 없다고 보았습니다.' },
+  ], deep: { q: '"되"와 "돼"를 헷갈리는 친구에게, 외우지 않고도 구별하는 방법을 설명해 보세요.', answer: '"돼"는 "되어"를 줄인 말입니다. 그 자리에 "되어"를 넣어 자연스러우면 "돼", 어색하면 "되"를 씁니다. 더 쉽게는 "하"와 "해"를 넣어 봅니다. "하"가 어울리면 "되"(되고, 되니), "해"가 어울리면 "돼"(돼요, 돼서)입니다.' } },
+
+  art: { items: [
+    { type: 'mc', topic: '인상주의', q: '"인상주의"라는 이름은 어느 작품에서 비롯되었는가?', choices: ['마네 「풀밭 위의 점심 식사」', '모네 「인상, 해돋이」', '르누아르 「물랭 드 라 갈레트의 무도회」', '세잔 「사과와 오렌지」'], answer: 1,
+      explain: '1874년 전시회에 나온 모네의 「인상, 해돋이」를 두고 한 비평가가 "인상주의자들"이라고 비꼬아 부른 것이 이름이 되었습니다.',
+      learn: '인상주의 화가들은 휴대용 튜브 물감 덕분에 야외에서 빛의 순간적인 변화를 빠른 붓질로 담았습니다. 이후 쇠라, 세잔, 고흐, 고갱의 후기 인상주의를 거쳐 20세기 야수파와 입체파로 이어지며 현대 미술의 문이 열렸습니다.' },
+    { type: 'mc', topic: '현대미술', q: '기성품 소변기에 서명해 「샘」이라는 제목으로 출품한 작가는?', choices: ['앤디 워홀', '마르셀 뒤샹', '파블로 피카소', '르네 마그리트'], answer: 1,
+      explain: '뒤샹은 1917년 이 작품으로 무엇을 만들었느냐보다 무엇을 예술로 선택하느냐가 중요하다는 질문을 던졌습니다. 이런 작품을 레디메이드라고 부릅니다.',
+      learn: '「샘」은 개념미술의 출발점으로 꼽힙니다. 작품의 가치가 손재주가 아니라 아이디어와 맥락에 있다는 생각은 이후 앤디 워홀의 팝아트, 1960년대 개념미술과 설치미술로 이어졌습니다.' },
+    { type: 'mc', topic: '음악사', q: '바로크 시대 작곡가가 아닌 사람은?', choices: ['요한 제바스티안 바흐', '안토니오 비발디', '게오르크 프리드리히 헨델', '루트비히 판 베토벤'], answer: 3,
+      explain: '베토벤(1770–1827)은 고전주의에서 낭만주의로 넘어가는 시기의 작곡가입니다. 바로크는 대략 1600–1750년입니다.',
+      learn: '서양 음악사는 흔히 바로크(바흐, 비발디) → 고전주의(하이든, 모차르트) → 낭만주의(쇼팽, 브람스) → 근현대로 나눕니다. 바로크는 여러 선율이 얽히는 대위법과 통주저음, 고전주의는 균형 잡힌 형식과 소나타, 낭만주의는 개인 감정의 표현이 특징입니다.' },
+    { type: 'mc', topic: '한국사', q: '세종이 훈민정음을 반포한 해는?', choices: ['1392년', '1446년', '1592년', '1443년'], answer: 1,
+      explain: '훈민정음은 1443년에 만들어지고 1446년에 반포되었습니다. 한글날(10월 9일)은 반포를 기념하는 날입니다.',
+      learn: '훈민정음 해례본에는 글자를 만든 원리가 적혀 있습니다. 자음은 발음 기관의 모양을 본떴고, 모음은 하늘(·), 땅(ㅡ), 사람(ㅣ)을 본떠 조합했습니다. 창제 원리와 목적이 기록으로 남은 문자는 드물어 해례본은 유네스코 세계기록유산이 되었습니다.' },
+    { type: 'mc', topic: '르네상스', q: '르네상스 회화에서 깊이감을 표현하기 위해 체계화된 기법은?', choices: ['선원근법', '점묘법', '콜라주', '프레스코의 금박'], answer: 0,
+      explain: '15세기 초 브루넬레스키가 실험하고 알베르티가 이론으로 정리한 선원근법은 평행선이 하나의 소실점으로 모이게 그려 공간감을 만듭니다.',
+      learn: '르네상스는 고대 그리스·로마 문화를 되살리고 인간과 자연을 사실적으로 관찰하는 흐름이었습니다. 레오나르도 다 빈치, 미켈란젤로, 라파엘로가 전성기를 이끌었고, 해부학과 원근법 같은 과학적 탐구가 예술과 함께 발전했습니다.' },
+  ], deep: { q: '뒤샹의 「샘」은 왜 예술로 인정받았을까요? "예술이란 무엇인가"에 대한 생각을 담아 설명해 보세요.', answer: '「샘」은 대량생산된 물건도 작가가 선택하고 새로운 맥락에 놓으면 예술이 될 수 있다는 질문 자체로 가치를 얻었습니다. 아름다움이나 기술보다 아이디어와 맥락이 예술을 만든다는 관점을 보여 주었고, 이 때문에 개념미술의 출발점이 되었습니다. 반대로 이런 관점이 예술의 기준을 흐린다는 비판도 함께 생각해 볼 수 있습니다.' } },
+
+  econ: { items: [
+    { type: 'mc', topic: '기회비용', q: '주말에 시급 1만 원 아르바이트(4시간) 대신 2만 원짜리 공연을 봤다. 기회비용은?', choices: ['2만 원', '4만 원', '6만 원', '0원'], answer: 2,
+      explain: '기회비용은 포기한 대안 중 가장 큰 가치입니다. 공연비 2만 원에 벌 수 있었던 4만 원을 더해 6만 원입니다.',
+      learn: '경제학의 출발점은 희소성입니다. 무언가를 고르면 다른 것을 포기해야 하고, 그 포기한 가치가 진짜 비용입니다. 이미 써서 되돌릴 수 없는 매몰비용은 앞으로의 선택에 반영하면 안 된다는 점도 함께 기억해 두면 좋습니다.' },
+    { type: 'mc', topic: '통화정책', q: '물가가 빠르게 오를 때 중앙은행이 일반적으로 취하는 조치는?', choices: ['기준금리 인하', '기준금리 인상', '국채 대량 매입', '지급준비율 인하'], answer: 1,
+      explain: '금리를 올리면 대출과 소비, 투자가 줄어 수요가 식고 물가 상승 압력이 낮아집니다.',
+      learn: '중앙은행은 기준금리, 공개시장조작(국채 매매), 지급준비율로 시중 통화량을 조절합니다. 경기가 나쁠 때는 반대로 금리를 내리고 국채를 사들여 돈을 풉니다. 한국은행의 기준금리는 금융통화위원회가 결정합니다.' },
+    { type: 'mc', topic: '무역 이론', q: '한 나라가 모든 상품을 더 싸게 만들 수 있어도 무역으로 서로 이익을 볼 수 있다는 이론은?', choices: ['절대우위론', '비교우위론', '중상주의', '보호무역론'], answer: 1,
+      explain: '데이비드 리카도의 비교우위론은 기회비용이 상대적으로 낮은 상품에 특화해 교환하면 양쪽 모두 이득이라고 설명합니다.',
+      learn: '애덤 스미스는 각자 더 잘 만드는 것을 교환하는 절대우위를 말했고, 리카도는 절대적으로 뒤처진 나라도 상대적 강점이 있으면 무역이 이롭다는 점을 보였습니다. 다만 현실에서는 산업 내 이해관계가 갈려 무역의 이익이 고르게 나뉘지 않는다는 점도 중요한 논점입니다.' },
+    { type: 'mc', topic: '탄력성', q: '쌀이나 전기 같은 필수재의 가격이 올라도 수요량이 크게 줄지 않는 이유를 설명하는 개념은?', choices: ['수요의 가격탄력성이 작다', '공급의 가격탄력성이 크다', '한계효용이 증가한다', '기펜재이다'], answer: 0,
+      explain: '대체할 것이 마땅치 않은 필수재는 가격이 바뀌어도 수요량이 잘 변하지 않습니다. 이를 비탄력적이라고 합니다.',
+      learn: '탄력성은 가격이 1% 변할 때 수요량이 몇 % 변하는지입니다. 기업은 비탄력적인 상품의 값을 올리면 매출이 늘어나는 경향이 있어 가격 전략에 이 개념을 씁니다. 정부가 담배나 술에 세금을 매기는 것도 수요가 비탄력적이라 세수가 안정적이기 때문입니다.' },
+    { type: 'mc', topic: '행동경제학', q: '같은 금액이라도 얻는 기쁨보다 잃는 고통을 더 크게 느끼는 경향은?', choices: ['손실 회피', '확증 편향', '규모의 경제', '구축 효과'], answer: 0,
+      explain: '카너먼과 트버스키의 전망 이론에 따르면 사람들은 손실을 같은 크기 이득의 약 2배로 느낍니다.',
+      learn: '행동경제학은 사람이 늘 합리적으로 계산한다는 가정을 실험으로 수정했습니다. 손실 회피, 기준점 효과(앵커링), 현재 편향 등은 마케팅과 정책 설계에 쓰이며, 카너먼은 2002년 노벨 경제학상을 받았습니다.' },
+  ], deep: { q: '손실 회피 성향이 개인 투자자의 행동에 어떤 영향을 줄 수 있는지 예를 들어 설명해 보세요.', answer: '손실을 확정하는 고통이 크기 때문에 떨어진 주식은 본전이 올 때까지 오래 들고 있고, 오른 주식은 이익이 사라질까 봐 너무 일찍 파는 경향이 생깁니다(처분 효과). 그 결과 손실은 커지고 이익은 작아질 수 있습니다. 미리 매도 기준을 정해 두는 규칙이 이런 편향을 줄이는 방법입니다.' } },
+
+  intuit: { items: [
+    { type: 'mc', topic: '생일 문제', q: '한 방에 몇 명 이상 있으면 생일이 같은 두 사람이 있을 확률이 50%를 넘을까?', choices: ['23명', '57명', '183명', '366명'], answer: 0,
+      explain: '23명이면 약 50.7%입니다. 사람 수가 아니라 짝의 수(23명이면 253쌍)가 빠르게 늘어나기 때문입니다.',
+      learn: '직관이 틀리는 이유는 "나와 생일이 같은 사람"을 떠올리기 때문입니다. 실제 질문은 "누구든 두 사람"입니다. 이 원리는 해시 충돌 공격(생일 공격)처럼 암호학에서도 중요하게 쓰입니다.',
+      steps: ['모두 생일이 다를 확률을 먼저 구한다.', '두 번째 사람이 다를 확률 364/365, 세 번째 363/365… 를 곱한다.', '23명까지 곱하면 약 0.493이 된다.', '따라서 같은 생일이 있을 확률은 1 − 0.493 ≈ 0.507.'] },
+    { type: 'estimate', topic: '지구의 크기', q: '지구 둘레(적도)는 대략 몇 km일까?', value: 40075, unit: 'km',
+      explain: '약 4만 km입니다. 원래 미터는 북극에서 적도까지 거리의 1천만분의 1로 정의되어, 지구 둘레가 거의 정확히 4만 km가 되었습니다.',
+      learn: '기원전 3세기 에라토스테네스는 두 도시에서 같은 날 정오의 그림자 각도 차이(약 7.2°, 원의 1/50)와 두 도시 사이 거리를 이용해 지구 둘레를 놀랍도록 정확히 계산했습니다. 페르미 추정의 원조라 할 만합니다.',
+      steps: ['서울-뉴욕 비행은 약 14시간, 대략 지구 1/4~1/3 바퀴다.', '비행기 속도는 시속 약 900km, 14시간이면 약 1만 2천 km.', '이를 약 1/3 바퀴로 보면 둘레는 3만 6천~4만 km.', '정답 약 40,075km와 같은 자릿수다.'] },
+    { type: 'mc', topic: '몬티 홀 문제', q: '문 3개 중 하나 뒤에 자동차가 있다. 하나를 고르자, 답을 아는 사회자가 나머지 중 염소가 있는 문을 열었다. 선택을 바꾸면 자동차를 받을 확률은?', choices: ['1/3', '1/2', '2/3', '바꾸든 말든 같다'], answer: 2,
+      explain: '처음 고른 문이 맞을 확률은 1/3이고, 사회자는 이 확률을 바꾸지 않습니다. 나머지 2/3는 열리지 않은 다른 문 하나로 모입니다.',
+      learn: '핵심은 사회자가 답을 알고 일부러 염소 문을 연다는 정보입니다. 사회자가 무작위로 열었는데 우연히 염소였다면 확률은 1/2이 됩니다. 조건부 확률에서 "정보가 어떻게 만들어졌는가"가 결과를 바꾼다는 좋은 예입니다.',
+      steps: ['처음 고른 문이 맞을 확률은 1/3, 틀릴 확률은 2/3.', '처음에 틀렸다면 사회자가 남은 염소를 열어 주므로 바꾸면 무조건 자동차.', '따라서 바꿔서 이길 확률 = 처음에 틀렸을 확률 = 2/3.'] },
+    { type: 'mc', topic: '기하급수', q: '두께 0.1mm 종이를 42번 접을 수 있다면 두께는 대략 어디까지 닿을까?', choices: ['63빌딩 높이', '에베레스트산 높이', '서울에서 부산까지', '지구에서 달까지'], answer: 3,
+      explain: '0.1mm × 2⁴² ≈ 0.1mm × 4.4조 ≈ 44만 km. 지구-달 평균 거리(약 38만 km)보다 깁니다.',
+      learn: '사람의 직관은 선형 증가에 익숙해 기하급수를 크게 과소평가합니다. 복리, 전염병 확산, 반도체 집적도(무어의 법칙)를 이해할 때 이 감각이 중요합니다. 2¹⁰ ≈ 1,000이라는 어림을 기억하면 빠르게 계산할 수 있습니다.',
+      steps: ['2¹⁰ ≈ 1,000이므로 2⁴⁰ ≈ 1조, 2⁴² ≈ 4조.', '0.1mm × 4조 = 4천억 mm = 4억 m = 40만 km.', '달까지는 약 38만 km이므로 달에 닿는다.'] },
+    { type: 'mc', topic: '기저율', q: '유병률 1%인 병을 99% 정확한 검사(환자는 99% 양성, 건강한 사람은 99% 음성)로 검사했더니 양성이 나왔다. 실제로 병이 있을 확률은?', choices: ['약 99%', '약 90%', '약 50%', '약 1%'], answer: 2,
+      explain: '1만 명 중 환자 100명에서 양성 99명, 건강한 9,900명에서 거짓 양성 99명. 양성 198명 중 진짜 환자는 99명으로 50%입니다.',
+      learn: '검사 정확도만 보고 기저율(원래 얼마나 흔한가)을 무시하는 것을 기저율 오류라고 합니다. 베이즈 정리가 이를 바로잡는 도구이며, 의료 검진, 보안 시스템의 경보, 법정 증거 해석에서 자주 문제가 됩니다.',
+      steps: ['1만 명으로 놓고 자연수로 계산한다.', '환자 100명 → 양성 99명.', '건강한 9,900명 → 1%가 거짓 양성, 99명.', '양성 198명 중 진짜 환자 99명 → 50%.'] },
+  ], deep: { q: '기저율 오류가 일상이나 뉴스에서 나타날 수 있는 사례를 하나 들고, 어떻게 판단해야 하는지 설명해 보세요.', answer: '예를 들어 공항 보안 시스템이 99% 정확하게 위험인물을 잡아낸다고 해도, 실제 위험인물이 극히 드물면 경보의 대부분은 무고한 사람입니다. 판단할 때는 정확도뿐 아니라 원래 얼마나 흔한지를 함께 보고, 1만 명 같은 구체적인 숫자로 바꿔 계산해 보면 오류를 피할 수 있습니다.' } },
+
+  logic: { items: [
+    { type: 'mc', topic: '삼단논법', q: '"모든 A는 B다. 어떤 B는 C다." 이때 "어떤 A는 C다"는?', choices: ['반드시 참', '반드시 거짓', '참인지 알 수 없다', '"모든 A는 C"와 같다'], answer: 2,
+      explain: 'C인 B가 A가 아닌 B일 수도 있습니다. 예: 모든 고양이는 동물이다, 어떤 동물은 날 수 있다 → 어떤 고양이는 날 수 있다(거짓).',
+      learn: '타당한 추론은 전제가 참이면 결론이 반드시 참인 것입니다. 벤다이어그램을 그려 결론이 거짓인 경우를 하나라도 만들 수 있으면 부당한 추론입니다. 이렇게 반례를 찾는 습관이 빠른 논리 판단의 핵심입니다.',
+      steps: ['A 원을 B 원 안에 그린다.', 'C 원은 B와 일부만 겹치면 된다.', 'C를 A 바깥의 B 부분에만 겹치게 그릴 수 있다.', '반례가 가능하므로 결론은 확정되지 않는다.'] },
+    { type: 'mc', topic: '웨이슨 선택 과제', q: '카드 앞면에 알파벳, 뒷면에 숫자가 있다. 보이는 면은 E, K, 4, 7. "모음 뒷면에는 짝수가 있다"는 규칙을 확인하려면 어떤 카드를 꼭 뒤집어야 할까?', choices: ['E와 4', 'E와 7', 'E만', 'E, 4, 7'], answer: 1,
+      explain: 'E 뒤에 홀수가 있거나 7 뒤에 모음이 있으면 규칙이 깨집니다. 4 뒤에 무엇이 있든 규칙과 상관없습니다.',
+      learn: '이 문제는 대부분의 사람이 틀리는 것으로 유명합니다. 규칙을 확인해 주는 사례(4)를 찾는 확증 편향 때문입니다. "P이면 Q"를 검증하려면 P인 경우와 Q가 아닌 경우를 확인해야 합니다(대우).',
+      steps: ['규칙: 모음 → 짝수.', '규칙을 깨는 경우는 "모음인데 홀수"뿐.', 'E는 모음이니 뒷면 확인 필요.', '7은 홀수니 앞면이 모음인지 확인 필요.', '4와 K는 어떤 경우에도 규칙을 깨지 않는다.'] },
+    { type: 'mc', topic: '수열', q: '2, 6, 12, 20, 30, ? 다음 수는?', choices: ['40', '42', '44', '36'], answer: 1,
+      explain: 'n × (n+1) 꼴입니다. 1×2, 2×3, 3×4, 4×5, 5×6 다음은 6×7 = 42.',
+      learn: '수열 문제는 차이를 먼저 봅니다. 차이가 4, 6, 8, 10으로 2씩 늘면 2차식입니다. 차이의 차이가 일정하면 2차, 비율이 일정하면 등비수열이라는 점을 기억하면 빠르게 풀 수 있습니다.',
+      steps: ['차이를 구한다: 4, 6, 8, 10.', '차이가 2씩 늘어나므로 다음 차이는 12.', '30 + 12 = 42.'] },
+    { type: 'mc', topic: '참말·거짓말 퍼즐', q: '진실만 말하는 사람과 거짓만 말하는 사람이 있다. A: "B는 거짓말쟁이다." B: "A와 나는 같은 종류다." 각각은?', choices: ['A 진실, B 진실', 'A 진실, B 거짓', 'A 거짓, B 진실', 'A 거짓, B 거짓'], answer: 1,
+      explain: 'B가 진실이라면 A도 진실이어야 하는데, 그러면 A의 말 때문에 B는 거짓말쟁이가 되어 모순입니다. 따라서 B는 거짓말쟁이, B의 말이 거짓이니 A와 B는 다른 종류로 A는 진실입니다.',
+      learn: '이런 퍼즐은 가정을 하나 세우고 모순이 나오는지 따지는 귀류법으로 풉니다. 수학의 √2가 무리수라는 증명도 같은 방식입니다. 경우의 수가 적을 때는 모든 조합을 표로 확인하는 것도 확실한 방법입니다.',
+      steps: ['B가 진실이라고 가정한다.', '그러면 A도 진실 → A의 말에 따라 B는 거짓 → 모순.', 'B는 거짓말쟁이다.', 'B의 말이 거짓이므로 A와 B는 다른 종류 → A는 진실.'] },
+    { type: 'mc', topic: '시계 각도', q: '3시 15분에 시침과 분침 사이의 작은 각은?', choices: ['0°', '7.5°', '15°', '30°'], answer: 1,
+      explain: '분침은 15분 위치 90°. 시침은 3시(90°)에서 15분 동안 7.5° 더 가 97.5°. 차이는 7.5°.',
+      learn: '분침은 1분에 6°, 시침은 1분에 0.5° 움직입니다. 이 두 속도만 알면 모든 시각의 각도를 계산할 수 있습니다. "직관적으로 0°"라는 답이 틀리는 이유는 시침이 멈춰 있다고 착각하기 때문입니다.',
+      steps: ['분침: 15분 × 6° = 90°.', '시침: 3시 = 90°, 15분 × 0.5° = 7.5° 더 → 97.5°.', '차이 = 7.5°.'] },
+  ], deep: { q: '웨이슨 선택 과제에서 많은 사람이 4를 뒤집겠다고 답하는 이유는 무엇일까요? 일상의 판단과 연결해 설명해 보세요.', answer: '사람들은 규칙이 맞다는 증거를 찾으려는 확증 편향이 있어서, 모음과 짝수가 함께 있는 사례(4)를 확인하고 싶어 합니다. 하지만 규칙을 검증하려면 규칙을 깰 수 있는 사례(홀수 7)를 찾아야 합니다. 일상에서도 내 생각을 지지하는 뉴스만 찾기보다 반대 증거가 있는지 확인하는 습관이 더 정확한 판단으로 이어집니다.' } },
+};
+
+// ───────── 유틸 ─────────
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = new Date();
+const TODAY = dateKey(today);
+const fmtNum = n => Number(n).toLocaleString('ko-KR');
+function shuffleChoices(item) {
+  if (item.type !== 'mc') return item;
+  const order = item.choices.map((_, i) => i).sort(() => Math.random() - .5);
+  return { ...item, choices: order.map(i => item.choices[i]), answer: order.indexOf(item.answer) };
+}
+
+// ───────── 저장소: 로그인했으면 내 기록(비공개), 아니면 이 브라우저 ─────────
+const store = {
+  mode: 'local', db: null, uid: null,
+  _l(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem('dq:' + k)); localStorage.setItem('dq:' + k, JSON.stringify(v)); } catch { return null; } },
+  async getQuiz(key) {
+    if (this.db) { const s = await this.db.collection('data/users/' + this.uid).doc('quiz-' + key).get(); return s.exists ? s.data().quiz : null; }
+    return this._l('quiz-' + key);
+  },
+  async putQuiz(key, quiz) {
+    if (this.db) return this.db.collection('data/users/' + this.uid).doc('quiz-' + key).set({ kind: 'quiz', date: TODAY, quiz });
+    this._l('quiz-' + key, quiz);
+  },
+  async addSession(s) {
+    if (this.db) return this.db.collection('data/users/' + this.uid).doc('sess-' + s.id).set({ kind: 'session', ...s });
+    const all = this._l('sessions') || []; all.push(s); this._l('sessions', all.slice(-400));
+  },
+  async updateSession(id, patch) {
+    if (this.db) return this.db.collection('data/users/' + this.uid).doc('sess-' + id).update(patch);
+    const all = this._l('sessions') || []; const s = all.find(x => x.id === id); if (s) Object.assign(s, patch); this._l('sessions', all);
+  },
+  async sessions() {
+    if (this.db) { const q = await this.db.collection('data/users/' + this.uid).where('kind', '==', 'session').get(); return q.docs.map(d => d.data()); }
+    return this._l('sessions') || [];
+  },
+};
+
+let sample = null;
+let sessions = [];
+const state = { view: 'home', cat: WEEK[today.getDay()], quiz: null, source: '', idx: 0, answers: [], picked: null, timer: null, left: SECONDS, startedAt: 0, sessionId: null, deepDone: null };
+
+// ───────── Claude 출제 ─────────
+function weakTopics() {
+  const wrong = [];
+  for (const s of [...sessions].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10))
+    for (const r of s.results || []) if (!r.correct) wrong.push(`${CATS[s.cat]?.name || s.cat}: ${r.topic}`);
+  return [...new Set(wrong)].slice(0, 8);
+}
+function recentTopics(cat) {
+  return [...new Set(sessions.filter(s => s.cat === cat).flatMap(s => (s.results || []).map(r => r.topic)))].slice(-25);
+}
+function buildPrompt(cat) {
+  const c = CATS[cat];
+  return `너는 대학 교양 수업 강사다. 날짜 ${TODAY}, 분야 "${c.name}"의 데일리 퀴즈를 만든다. 범위: ${c.desc}.
+목적: 먼저 문제로 학습자가 얼마나 이해하고 있는지 진단하고, 풀고 나면 해설과 미니 강의로 지식을 넓힌다.
+규칙:
+- 한국어. 대학 교양 수준. 지엽적인 암기보다 개념 이해와 적용을 묻는다.
+- 학계에서 확립된 사실만 쓴다. 최근 시사 뉴스는 출제하지 않는다. 정치·사회는 제도, 개념, 사상, 역사 위주로 중립적으로 쓴다.
+- 정확히 5문항, 모두 다른 주제. 난이도는 쉬움 1, 보통 3, 어려움 1.
+- type은 "mc"(4지선다)${c.timed ? ' 또는 "estimate"(숫자 하나로 답하는 추정 문제. 정답이 널리 알려진 값일 때만. 1~2문항)' : '만 쓴다'}.
+- mc: choices 4개, answer는 정답 인덱스(0~3). 정답 위치를 골고루 섞는다. 오답도 그럴듯하게.
+- estimate: value(숫자), unit(단위).
+- explain: 왜 정답인지 2~3문장. learn: 이 개념을 넓히는 미니 강의 3~5문장(관련 개념, 인물, 실제 사례).
+- steps: ${c.timed ? '정답에 빠르게 도달하는 추론 단계 3~5개, 각 한 문장. 반드시 넣는다.' : '빈 배열.'}
+- 학습자가 최근 틀린 주제: ${weakTopics().join(', ') || '없음'}. 이 중 이 분야와 관련된 것이 있으면 연결된 개념을 1문항 넣되 같은 문제는 피한다.
+- 이미 낸 주제(반복 금지): ${recentTopics(cat).join(', ') || '없음'}.
+- 마지막에 오늘 문항들을 엮는 서술형 질문 deep 하나: q(질문), answer(모범답안 3~4문장).
+JSON만 답한다:
+{"items":[{"type":"mc","topic":"짧은 주제명","q":"","choices":["","","",""],"answer":0,"explain":"","learn":"","steps":[]}],"deep":{"q":"","answer":""}}`;
+}
+function validQuiz(j) {
+  if (!j || !Array.isArray(j.items)) return null;
+  const items = j.items.filter(it => it && typeof it.q === 'string' && typeof it.explain === 'string' && (
+    (it.type === 'mc' && Array.isArray(it.choices) && it.choices.length === 4 && Number.isInteger(it.answer) && it.answer >= 0 && it.answer < 4) ||
+    (it.type === 'estimate' && Number(it.value) > 0)
+  )).map(it => ({ ...it, topic: String(it.topic || '주제'), learn: String(it.learn || ''), steps: Array.isArray(it.steps) ? it.steps.map(String) : [], value: it.value != null ? Number(it.value) : undefined }));
+  if (items.length < 3) return null;
+  const deep = j.deep && typeof j.deep.q === 'string' ? { q: j.deep.q, answer: String(j.deep.answer || '') } : null;
+  return { items, deep };
+}
+
+let genCtl = null;
+async function generate(cat, fresh) {
+  const main = $('#main');
+  main.innerHTML = `<section class="sheet"><div class="loading">Claude가 오늘의 ${esc(CATS[cat].name)} 문제를 출제하고 있어요. 30초~1분 걸릴 수 있어요.</div><div><button class="btn" id="stop">그만두고 기본 문제로</button></div></section>`;
+  genCtl = new AbortController();
+  $('#stop').onclick = () => genCtl.abort();
+  try {
+    const j = await sample.json(buildPrompt(cat), { signal: genCtl.signal, cache: fresh ? false : { gcTime: 86400000 } });
+    const quiz = validQuiz(j);
+    if (!quiz) throw { code: 'invalid_json' };
+    quiz.items = quiz.items.map(shuffleChoices);
+    const key = `${TODAY}-${cat}` + (fresh ? '-' + Date.now() : '');
+    await store.putQuiz(`${TODAY}-${cat}`, { ...quiz, key }).catch(() => {});
+    start(cat, quiz, 'claude');
+  } catch (e) {
+    if (e?.code === 'not_granted' || e?.code === 'sampling_disabled') sample = null;
+    const msg = e?.code === 'cancelled' ? '' : e?.code === 'rate_limited' ? 'Claude 사용량이 많아 잠시 쉬어야 해요. 오늘은 기본 문제로 풀어 볼게요.' : e?.code === 'not_granted' ? '' : '출제가 매끄럽지 않았어요. 기본 문제로 시작할게요.';
+    start(cat, { items: BANK[cat].items.map(shuffleChoices), deep: BANK[cat].deep }, 'bank', msg);
+  }
+}
+
+// ───────── 화면: 홈 ─────────
+function renderWeek() {
+  const doneToday = new Set(sessions.filter(s => s.date === TODAY).map(s => s.cat));
+  $('#week').innerHTML = WEEK.map((cat, d) => `<button class="day ${doneToday.has(cat) ? 'done' : ''}" data-cat="${cat}" aria-current="${d === today.getDay()}" style="color:var(--c-${cat})">
+    <span class="dw">${DOW[d]}</span><span class="dn" style="color:var(--ink)">${CATS[cat].name}</span><span class="dot" style="background:var(--c-${cat})"></span></button>`).join('');
+  $('#week').querySelectorAll('.day').forEach(b => b.onclick = () => { state.cat = b.dataset.cat; state.view = 'home'; setTab('today'); render(); });
+}
+function streak() {
+  const days = new Set(sessions.map(s => s.date));
+  let n = 0; const d = new Date(today);
+  if (!days.has(dateKey(d))) d.setDate(d.getDate() - 1);
+  while (days.has(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function renderMeta() {
+  const total = sessions.reduce((a, s) => a + (s.total || 0), 0), right = sessions.reduce((a, s) => a + (s.score || 0), 0);
+  $('#meta').innerHTML = `<span>${today.getMonth() + 1}월 ${today.getDate()}일 ${DOW[today.getDay()]}요일</span><span>연속 <b>${streak()}</b>일</span><span>누적 정답률 <b>${total ? Math.round(right / total * 100) : 0}%</b></span>`;
+}
+async function renderHome(note = '') {
+  const cat = state.cat, c = CATS[cat];
+  const isToday = cat === WEEK[today.getDay()];
+  const saved = await store.getQuiz(`${TODAY}-${cat}`).catch(() => null);
+  const doneCount = sessions.filter(s => s.date === TODAY && s.cat === cat).length;
+  $('#main').innerHTML = `<section class="sheet">
+    <div class="eyebrow"><span class="chip"><i style="background:var(--c-${cat})"></i>${esc(c.name)}</span>${isToday ? '<span>오늘의 분야</span>' : '<span>다른 요일 분야 미리 풀기</span>'}${c.timed ? '<span>· 문항당 60초</span>' : ''}</div>
+    <h2>${c.timed ? (cat === 'logic' ? '짧은 시간에 논리를 끝까지 밀고 가 보세요' : '감으로 먼저 답하고, 근거로 확인해 보세요') : '먼저 풀고, 그다음에 배웁니다'}</h2>
+    <p class="lead">${esc(c.desc)}. 5문항을 풀 때마다 얼마나 확신하는지도 고르게 돼요. 확신했는데 틀린 문항은 "착각하고 있던 지식"으로 따로 짚어 드려요.</p>
+    ${doneCount ? `<p class="status">오늘 이 분야를 ${doneCount}번 풀었어요.</p>` : ''}
+    ${note ? `<p class="status">${esc(note)}</p>` : ''}
+    <div class="conf"><div class="row">
+      ${saved ? '<button class="btn primary" id="go-saved">오늘 받은 문제 풀기</button>' : ''}
+      ${sample ? `<button class="btn ${saved ? '' : 'primary'}" id="go-gen">${saved ? '새 문제 더 받기' : 'Claude에게 오늘 문제 받기'}</button>` : ''}
+      <button class="btn ${!saved && !sample ? 'primary' : ''}" id="go-bank">기본 문제로 풀기</button>
+    </div>
+    ${sample ? '<p class="hint">Claude 출제는 처음 한 번 허용을 묻고, 내 Claude 사용량을 씁니다. 최근 틀린 주제를 반영해 매번 새로 만듭니다.</p>' : '<p class="hint">Claude 출제는 claude.ai에서 이 페이지를 열었을 때만 쓸 수 있어요. 지금은 분야별 기본 문제를 풀 수 있어요.</p>'}
+    </div></section>`;
+  if (saved) $('#go-saved').onclick = () => start(cat, saved, 'claude');
+  if (sample) $('#go-gen').onclick = () => generate(cat, !!saved);
+  $('#go-bank').onclick = () => start(cat, { items: BANK[cat].items.map(shuffleChoices), deep: BANK[cat].deep }, 'bank');
+}
+
+// ───────── 화면: 문제 ─────────
+function start(cat, quiz, source, note = '') {
+  Object.assign(state, { view: 'quiz', cat, quiz, source, idx: 0, answers: [], picked: null, deepDone: null, sessionId: `${TODAY}-${cat}-${Date.now().toString(36)}` });
+  if (note) state.note = note; else state.note = '';
+  renderQuestion();
+}
+function stopTimer() { clearInterval(state.timer); state.timer = null; }
+function renderQuestion() {
+  stopTimer();
+  const { quiz, idx, cat } = state, it = quiz.items[idx], c = CATS[cat];
+  state.picked = null; state.left = SECONDS; state.startedAt = Date.now();
+  const n = quiz.items.length;
+  $('#main').innerHTML = `<section class="sheet">
+    ${state.note ? `<p class="status">${esc(state.note)}</p>` : ''}
+    <div class="eyebrow"><span class="chip"><i style="background:var(--c-${cat})"></i>${esc(c.name)}</span><span>${idx + 1} / ${n}</span><span>· ${esc(it.topic)}</span>${state.source === 'claude' ? '<span>· Claude 출제</span>' : ''}${c.timed ? `<span class="timer" id="timer">${SECONDS}s</span>` : ''}</div>
+    <div class="bar"><span style="width:${idx / n * 100}%"></span></div>
+    <p class="q">${esc(it.q)}</p>
+    <div id="answer">${it.type === 'mc'
+      ? `<div class="choices">${it.choices.map((ch, i) => `<button class="choice" data-i="${i}" aria-pressed="false"><span class="k">${'ABCD'[i]}</span><span>${esc(ch)}</span></button>`).join('')}</div>`
+      : `<div class="est"><input id="est" inputmode="decimal" placeholder="숫자로 입력" autocomplete="off"><span>${esc(it.unit || '')}</span></div><p class="hint">정답의 1/3배~3배 안이면 맞은 것으로 쳐요. 자릿수 감각이 핵심이에요.</p>`}</div>
+    <div class="conf" id="conf">
+      <p class="hint">얼마나 확신하나요? 고르면 바로 제출돼요.</p>
+      <div class="row">
+        <button class="btn" data-c="sure" disabled>확신해요</button>
+        <button class="btn" data-c="half" disabled>반반이에요</button>
+        <button class="btn" data-c="guess" disabled>감으로 찍었어요</button>
+      </div>
+    </div>
+    <div id="after"></div>
+  </section>`;
+  const confBtns = [...document.querySelectorAll('#conf button')];
+  const enable = on => confBtns.forEach(b => b.disabled = !on);
+  if (it.type === 'mc') {
+    document.querySelectorAll('.choice').forEach(b => b.onclick = () => {
+      state.picked = +b.dataset.i;
+      document.querySelectorAll('.choice').forEach(x => x.setAttribute('aria-pressed', x === b));
+      enable(true);
+    });
+  } else {
+    const inp = $('#est');
+    inp.oninput = () => { const v = parseFloat(inp.value.replace(/,/g, '')); state.picked = v > 0 ? v : null; enable(state.picked != null); };
+    inp.focus();
+  }
+  confBtns.forEach(b => b.onclick = () => submit(b.dataset.c));
+  if (c.timed) {
+    state.timer = setInterval(() => {
+      state.left--;
+      const t = $('#timer'); if (!t) return stopTimer();
+      t.textContent = state.left >= 0 ? state.left + 's' : '시간 초과';
+      t.classList.toggle('low', state.left <= 10);
+    }, 1000);
+  }
+}
+function judge(it, picked) {
+  if (it.type === 'mc') return picked === it.answer;
+  return Math.abs(Math.log10(picked / it.value)) <= Math.log10(3);
+}
+function submit(conf) {
+  stopTimer();
+  const it = state.quiz.items[state.idx];
+  const correct = judge(it, state.picked);
+  const secs = Math.round((Date.now() - state.startedAt) / 1000);
+  state.answers.push({ topic: it.topic, correct, conf, secs, picked: state.picked });
+  document.querySelectorAll('#conf button, .choice').forEach(b => b.disabled = true);
+  $('#conf').hidden = true;
+  if (it.type === 'mc') {
+    document.querySelectorAll('.choice').forEach(b => { const i = +b.dataset.i; if (i === it.answer) b.classList.add('right'); else if (i === state.picked) b.classList.add('wrong'); });
+  } else $('#est').disabled = true;
+  const verdict = correct ? (conf === 'guess' ? '맞았어요. 그런데 감으로 맞힌 거라 해설을 꼭 읽어 두세요.' : '맞았어요.') : (conf === 'sure' ? '틀렸어요. 확신했던 문제라 착각하던 지식일 수 있어요.' : '틀렸어요.');
+  const estLine = it.type === 'estimate' ? `<p>정답: <b>${fmtNum(it.value)} ${esc(it.unit || '')}</b> · 내 답은 정답의 ${(state.picked / it.value).toFixed(2)}배</p>` : '';
+  const last = state.idx === state.quiz.items.length - 1;
+  $('#after').innerHTML = `<div class="explain">
+    <p class="verdict ${correct ? 'ok' : 'no'}">${verdict}${CATS[state.cat].timed ? ` <span class="hint">(${secs}초)</span>` : ''}</p>
+    ${estLine}
+    <p>${esc(it.explain)}</p>
+    ${it.steps?.length ? `<div class="steps"><h3>논리 전개</h3><ol>${it.steps.map((s, i) => `<li ${i ? 'hidden' : ''}>${esc(s)}</li>`).join('')}</ol>${it.steps.length > 1 ? '<button class="btn ghost" id="more-step">다음 단계 보기 →</button>' : ''}</div>` : ''}
+    ${it.learn ? `<div class="learn"><h3>더 알아보기</h3><p>${esc(it.learn)}</p></div>` : ''}
+    <div><button class="btn primary" id="next">${last ? '결과 보기' : '다음 문제'}</button></div>
+  </div>`;
+  const more = $('#more-step');
+  if (more) more.onclick = () => { const h = document.querySelector('.steps li[hidden]'); if (h) h.hidden = false; if (!document.querySelector('.steps li[hidden]')) more.remove(); };
+  $('#next').onclick = () => { if (last) finish(); else { state.idx++; renderQuestion(); } };
+  $('#next').focus();
+}
+
+// ───────── 화면: 결과 ─────────
+async function finish() {
+  const a = state.answers, score = a.filter(x => x.correct).length;
+  const sess = { id: state.sessionId, date: TODAY, at: Date.now(), cat: state.cat, source: state.source, score, total: a.length,
+    results: a.map(x => ({ topic: x.topic, correct: x.correct, conf: x.conf, secs: x.secs })) };
+  sessions.push(sess);
+  let saveNote = '';
+  try { await store.addSession(sess); } catch { saveNote = '기록을 저장하지 못했어요. 이 결과는 이 화면에서만 볼 수 있어요.'; }
+  renderMeta(); renderWeek();
+  state.view = 'result';
+  renderResult(saveNote);
+}
+function classify(x) {
+  if (!x.correct && x.conf === 'sure') return ['illusion', '착각'];
+  if (x.correct && x.conf === 'guess') return ['lucky', '운'];
+  if (x.correct) return ['solid', '아는 것'];
+  return ['gap', '빈칸'];
+}
+function renderResult(saveNote = '') {
+  const a = state.answers, score = a.filter(x => x.correct).length, deep = state.quiz.deep;
+  const sure = a.filter(x => x.conf === 'sure'), sureRight = sure.filter(x => x.correct).length;
+  const ill = a.filter(x => !x.correct && x.conf === 'sure').length;
+  $('#main').innerHTML = `<section class="sheet">
+    <div class="eyebrow"><span class="chip"><i style="background:var(--c-${state.cat})"></i>${esc(CATS[state.cat].name)}</span><span>오늘의 결과</span></div>
+    <div class="score"><div class="big">${score}<small> / ${a.length}</small></div>
+      <p class="lead">${sure.length ? `확신한 ${sure.length}문항 중 ${sureRight}문항 정답. ` : ''}${ill ? `확신했지만 틀린 ${ill}문항은 다시 볼 가치가 가장 커요.` : score === a.length ? '전부 맞혔어요.' : '틀린 주제는 다음 출제 때 연결 개념으로 다시 나와요.'}</p></div>
+    ${saveNote ? `<p class="status err">${esc(saveNote)}</p>` : ''}
+    <div class="flags">${a.map(x => { const [k, l] = classify(x); return `<div class="flag"><span class="tag ${k}">${l}</span><span>${esc(x.topic)}${CATS[state.cat].timed ? ` <span class="hint">· ${x.secs}초</span>` : ''}</span></div>`; }).join('')}</div>
+    <p class="hint">착각 = 확신했는데 틀림 · 운 = 찍었는데 맞음 · 빈칸 = 몰라서 틀림 · 아는 것 = 알고 맞힘</p>
+    ${deep ? `<div class="deep"><h3>한 걸음 더 · 서술형</h3><p class="q" style="font-size:19px">${esc(deep.q)}</p>
+      <textarea id="deep-answer" placeholder="3~4문장으로 내 생각을 써 보세요."></textarea>
+      <div class="conf"><div class="row"><button class="btn primary" id="deep-go">${sample ? 'Claude에게 채점받기' : '모범답안과 비교하기'}</button></div></div>
+      <div id="deep-out"></div></div>` : ''}
+    <div class="conf"><div class="row"><button class="btn" id="again">다른 분야 고르기</button><button class="btn" id="to-stats">내 기록 보기</button></div></div>
+  </section>`;
+  $('#again').onclick = () => { state.view = 'home'; render(); };
+  $('#to-stats').onclick = () => { setTab('stats'); };
+  if (deep) $('#deep-go').onclick = () => gradeDeep(deep);
+}
+async function gradeDeep(deep) {
+  const ans = $('#deep-answer').value.trim(), out = $('#deep-out'), btn = $('#deep-go');
+  if (!ans) { out.innerHTML = '<p class="status">먼저 답을 써 주세요.</p>'; return; }
+  const model = `<div class="feedback"><h3 style="margin:0;font-size:14px;color:var(--muted)">모범답안</h3><p>${esc(deep.answer)}</p></div>`;
+  if (!sample) { out.innerHTML = model; return; }
+  btn.disabled = true; out.innerHTML = '<div class="loading">채점 중이에요.</div>';
+  try {
+    const r = await sample.json(`대학 교양 수업 서술형 답안을 채점한다. 친절하지만 정확하게.
+질문: ${deep.q}
+모범답안: ${deep.answer}
+학생 답: ${ans.slice(0, 3000)}
+0~3점(3: 핵심 개념을 정확히 설명, 2: 대체로 맞지만 빠진 것 있음, 1: 일부만 맞음, 0: 틀리거나 무관). feedback은 잘한 점 한 문장, 빠지거나 틀린 개념 1~2문장. JSON만: {"score":0,"feedback":""}`, { cache: false });
+    const sc = Math.max(0, Math.min(3, Number(r?.score) || 0));
+    out.innerHTML = `<div class="feedback"><p class="verdict ${sc >= 2 ? 'ok' : 'no'}">${sc} / 3점</p><p>${esc(r?.feedback || '')}</p></div>${model}`;
+    store.updateSession(state.sessionId, { deepScore: sc }).catch(() => {});
+    const s = sessions.find(x => x.id === state.sessionId); if (s) s.deepScore = sc;
+  } catch (e) {
+    if (e?.code === 'not_granted' || e?.code === 'sampling_disabled') sample = null;
+    out.innerHTML = `<p class="status">채점을 받지 못했어요. 모범답안과 직접 비교해 보세요.</p>${model}`;
+  } finally { btn.disabled = false; }
+}
+
+// ───────── 화면: 기록 ─────────
+function renderStats() {
+  const total = sessions.reduce((a, s) => a + (s.total || 0), 0), right = sessions.reduce((a, s) => a + (s.score || 0), 0);
+  const all = sessions.flatMap(s => s.results || []);
+  const sure = all.filter(r => r.conf === 'sure'), ill = sure.filter(r => !r.correct).length;
+  const byCat = Object.keys(CATS).map(k => { const ss = sessions.filter(s => s.cat === k); const t = ss.reduce((a, s) => a + s.total, 0), r = ss.reduce((a, s) => a + s.score, 0); return { k, t, pct: t ? Math.round(r / t * 100) : null }; });
+  const wrong = weakTopics();
+  const recent = [...sessions].sort((a, b) => b.at - a.at).slice(0, 12);
+  $('#main').innerHTML = `<section class="sheet">
+    <h2>내 기록</h2>
+    ${store.mode === 'local' ? '<p class="hint">로그인 정보를 확인할 수 없어 이 브라우저에만 저장하고 있어요.</p>' : '<p class="hint">기록은 나만 볼 수 있게 저장돼요.</p>'}
+    <div class="stats">
+      <div class="stat"><div class="n">${streak()}</div><div class="l">연속 학습일</div></div>
+      <div class="stat"><div class="n">${sessions.length}</div><div class="l">푼 세트</div></div>
+      <div class="stat"><div class="n">${total ? Math.round(right / total * 100) : 0}%</div><div class="l">전체 정답률</div></div>
+      <div class="stat"><div class="n">${sure.length ? Math.round((sure.length - ill) / sure.length * 100) + '%' : '-'}</div><div class="l">확신했을 때 정답률</div></div>
+    </div>
+    <h3 style="margin:0;font:600 15px var(--f-body)">분야별 정답률</h3>
+    <div class="catbars">${byCat.map(b => `<div class="catbar"><span>${esc(CATS[b.k].name)}</span><div class="track"><span style="width:${b.pct ?? 0}%;background:var(--c-${b.k})"></span></div><span class="v">${b.pct == null ? '-' : b.pct + '%'}</span></div>`).join('')}</div>
+    ${wrong.length ? `<h3 style="margin:0;font:600 15px var(--f-body)">최근 틀린 주제</h3><p class="lead">${wrong.map(esc).join(' · ')}</p><p class="hint">Claude가 출제할 때 이 주제들과 연결된 개념을 다시 물어봐요.</p>` : ''}
+    <h3 style="margin:0;font:600 15px var(--f-body)">최근 풀이</h3>
+    ${recent.length ? `<div class="hist">${recent.map(s => `<div><span>${esc(s.date)}</span><span>${esc(CATS[s.cat]?.name || s.cat)}${s.source === 'claude' ? ' · Claude 출제' : ''}</span><span>${s.score}/${s.total}${s.deepScore != null ? ` · 서술 ${s.deepScore}/3` : ''}</span></div>`).join('')}</div>` : '<p class="lead">아직 기록이 없어요. 오늘의 문제를 풀면 여기에 쌓여요.</p>'}
+  </section>`;
+}
+
+// ───────── 라우팅 ─────────
+function setTab(t) {
+  $('#tab-today').setAttribute('aria-pressed', t === 'today');
+  $('#tab-stats').setAttribute('aria-pressed', t === 'stats');
+  if (t === 'stats') { stopTimer(); state.prevView = state.view === 'stats' ? state.prevView : state.view; state.view = 'stats'; }
+  else if (state.view === 'stats') state.view = state.prevView === 'quiz' ? 'quiz' : state.prevView === 'result' ? 'result' : 'home';
+  render();
+}
+$('#tab-today').onclick = () => setTab('today');
+$('#tab-stats').onclick = () => setTab('stats');
+function render() {
+  renderMeta(); renderWeek();
+  if (state.view === 'stats') renderStats();
+  else if (state.view === 'quiz') {
+    if (state.answers.length > state.idx) { if (state.idx === state.quiz.items.length - 1) { state.view = 'result'; return renderResult(); } state.idx++; }
+    renderQuestion();
+  }
+  else if (state.view === 'result') renderResult();
+  else renderHome();
+}
+
+// ───────── 시작 ─────────
+render();
+(async () => {
+  if (!window.claude?.use) return;
+  const [s, db, user] = await Promise.all([claude.use('sample'), claude.use('db'), claude.use('user')]);
+  sample = s;
+  const uid = user ? await user.id().catch(() => null) : null;
+  if (db && uid) { store.db = db; store.uid = uid; store.mode = 'db'; }
+  try { sessions = await store.sessions(); } catch { sessions = store._l('sessions') || []; store.db = null; store.mode = 'local'; }
+  if (state.view === 'home' || state.view === 'stats') render(); else { renderMeta(); renderWeek(); }
+})();
+if (!window.claude?.use) { sessions = store._l('sessions') || []; render(); }
+</script>

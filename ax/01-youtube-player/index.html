@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>취향 자동재생</title>
+<style>
+  :root { --bg:#111; --panel:#1c1c1f; --text:#eee; --muted:#999; --accent:#7aa2ff; --chip:#2a2a30; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui, "Malgun Gothic", sans-serif; }
+  .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+  .player { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden; }
+  .player > div, .player iframe { position:absolute; inset:0; width:100%; height:100%; }
+  .now { margin:12px 0 4px; font-size:15px; }
+  .now small { color:var(--muted); }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+  button { background:var(--chip); color:var(--text); border:0; border-radius:8px; padding:9px 14px; font-size:14px; cursor:pointer; }
+  button:hover { filter:brightness(1.25); }
+  button.on { background:var(--accent); color:#000; }
+  .people { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .people button { font-size:13px; }
+  .people button .w { color:var(--muted); margin-left:4px; }
+  .people button.on .w { color:#123; }
+  .hint { color:var(--muted); font-size:12px; margin-top:12px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="player"><div id="yt"></div></div>
+  <div class="now" id="now">불러오는 중…</div>
+  <div class="bar">
+    <button id="sound">🔇 소리 켜기</button>
+    <button id="next">⏭ 다음</button>
+    <button id="like">👍 좋아요</button>
+    <button id="dislike">👎 별로 (다음 영상)</button>
+    <button id="reset">취향 초기화</button>
+  </div>
+  <div class="people" id="people"></div>
+  <div class="hint">
+    사람 버튼으로 켜고 끕니다. 👍/👎를 누를수록 그 사람이 더 자주/덜 나오고, 👎한 영상은 다시 안 나옵니다.<br>
+    브라우저 정책상 처음엔 음소거로 자동재생돼요. "소리 켜기"를 한 번 누르면 이후 영상도 소리가 켜진 채로 이어집니다.
+  </div>
+</div>
+
+<script>
+// id|사람 — 2026-11-26 유튜브 검색으로 모은 목록 (영상 추가/삭제는 여기서)
+const PEOPLE = {
+  karina:   { name:'카리나 (aespa)', ids:'qA7RgR3JSK0 VP50_7GZaSs 9HPr68sGV7c kbKbmSQ_hwM IIj9ckeJzgU -XMUVRGeHf4 90gUAIS-jBQ OojlbI2DdgQ f7X8oKFkAI4 pBlpcEELPdM eAfsiHT9YtM 693lIQ4ZwoM sXeYkw4VE24 JxVKiHxWIAg bjGMNXOJItc 1U2vTeZklbw 4oAA6esif9E K3wqsn1Jl5A 9yG7S_dMIp8 lY2MWCSxvDU MUZUWMWviCM VXhW_5nimPc -IciW3tLF7Y kI4QFk8Dq-s W_jWnzWdRrg plO3jULOoKE 0-oZzYNwxVk K-LW1gUUclA R2P0sW9CGX8 a6msxLZXW6M Enqo8xDOwd4 NsixysIITyI Yh_1h4gTv4w 6_sFGZGE12g JTqCtl548oc R3AnAhBg7i4 5bF1-ohNeX0 V-hLdNm-KVE 5OCFIpwllCo 9PT8zngO03k MrsbB7qQFQA R30DHQSos8I WFIzerh0AZI' },
+  anna:     { name:'안나 (MEOVV)', ids:'dblLC2fqLXY 9C4eP_SN7do mIj35Txm_og nim2poV6ygw FluYMUMG1SI wYIwOmoIJQI BwJcGzF3p2Y N06OlFLHERQ QcfjgrdtwYw OnEkb3nAmf0 0OB4Pbl-NWw EEyUdDT8pgk 3HzK3skyHpQ JaqbDbctfJI lG0YePikbOc VT4fYFflYSo' },
+  moonjihae:{ name:'문지혜', ids:'OcSyFin_wZs ZuDbguOtyTA KXiE4pwnDm4 yz0_anLuWns gqj6mxxRy08 yJheTIhXae8 WDGTsY7guzs 33BJ97lvpxc UNv-fUnGcKM a71CXZLtAVU eIqDZ8FJ6QA SlEEl_3P6-w rR0VOH9TLN8 8ELpkGcWMtM siDZUI9SuY4' },
+  karen:    { name:'Karen Napoly', ids:'AAnGhUy-Wlg P_5X7saCCg4 qiQMcNfD0PM bah7n5dXAro dgOi6O8umY0 ddPbhi4fJGQ pLgq-WtpRMU pDZZSVBavfw m3K_QHwUSAY OeU_EcTp2KE qQx7hs6TCDU TMfcgQDqu00 hyZW9jScn-Y l7jz7YD4GAM MWZEo-xlRmY 3XURytq0l7o E0E55FYfjgw d2M5SykKTgI nOzdLW2sORU zd6E1Prsf8Y GDrO1HnnPUM CbvBRMYKsU4 MJM4O075tU8' },
+  candela:  { name:'Candela Gallo', ids:'ytbbL78KB-I XSa2usrIkik yZz44Gn1tKY dtvyqz_Ahns QlOkMQC8R0Y IiMH9QdcqXU 29wcCth5caM 4M5Dch5OIr8 Ok0eamIre-s dXOF2chAkBc 22VROG-XpeQ -h_4XeKzW9Q InrTa8MlsxQ uy3FazxgpS4 YBD8CDJcvaE 5Xd-po5eweo v50oFobWo-M eMoEs5mAxck VyKFC93o_7A' },
+};
+for (const k in PEOPLE) PEOPLE[k].ids = PEOPLE[k].ids.split(/\s+/);
+
+// ---- 저장된 취향 ----
+const KEY = 'ytpref-v1';
+function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(pref)); } catch {} }
+let pref = load();
+pref.weight ??= {}; pref.off ??= {}; pref.banned ??= {}; pref.liked ??= {}; pref.recent ??= []; pref.sound ??= false;
+for (const k in PEOPLE) pref.weight[k] ??= 1;
+
+// ---- 다음 영상 고르기: 사람 가중치 랜덤 → 그 사람 영상 중 최근에 안 본 것 ----
+function pick() {
+  const active = Object.keys(PEOPLE).filter(k => !pref.off[k]);
+  const pool = active.length ? active : Object.keys(PEOPLE);
+  let total = pool.reduce((s, k) => s + pref.weight[k], 0), r = Math.random() * total, who = pool[0];
+  for (const k of pool) { r -= pref.weight[k]; if (r <= 0) { who = k; break; } }
+  let cands = PEOPLE[who].ids.filter(id => !pref.banned[id] && !pref.recent.includes(id));
+  if (!cands.length) cands = PEOPLE[who].ids.filter(id => !pref.banned[id]);
+  if (!cands.length) cands = PEOPLE[who].ids;
+  // 좋아요 누른 영상은 3배 확률
+  const bag = cands.flatMap(id => pref.liked[id] ? [id, id, id] : [id]);
+  return { who, id: bag[Math.floor(Math.random() * bag.length)] };
+}
+
+let player, cur;
+function playNext() {
+  cur = pick();
+  pref.recent = [cur.id, ...pref.recent.filter(x => x !== cur.id)].slice(0, 40);
+  save();
+  player.loadVideoById(cur.id);
+  applySound();
+  renderNow();
+}
+function applySound() { if (!player) return; pref.sound ? player.unMute() : player.mute(); }
+
+function renderNow() {
+  const t = player?.getVideoData?.().title || '';
+  document.getElementById('now').innerHTML = `<b>${PEOPLE[cur.who].name}</b> ${t ? '· ' + t.replace(/</g,'&lt;') : ''} <small>${pref.liked[cur.id] ? '👍' : ''}</small>`;
+}
+function renderPeople() {
+  const el = document.getElementById('people'); el.innerHTML = '';
+  for (const k in PEOPLE) {
+    const b = document.createElement('button');
+    b.className = pref.off[k] ? '' : 'on';
+    b.innerHTML = `${PEOPLE[k].name}<span class="w">×${pref.weight[k].toFixed(1)}</span>`;
+    b.onclick = () => { pref.off[k] = !pref.off[k]; save(); renderPeople(); };
+    el.appendChild(b);
+  }
+  const s = document.getElementById('sound');
+  s.textContent = pref.sound ? '🔊 소리 끄기' : '🔇 소리 켜기';
+  s.className = pref.sound ? 'on' : '';
+}
+
+document.getElementById('next').onclick = playNext;
+document.getElementById('sound').onclick = () => { pref.sound = !pref.sound; save(); applySound(); renderPeople(); };
+document.getElementById('like').onclick = () => {
+  if (!cur) return;
+  pref.liked[cur.id] = true;
+  pref.weight[cur.who] = Math.min(5, pref.weight[cur.who] + 0.3);
+  save(); renderPeople(); renderNow();
+};
+document.getElementById('dislike').onclick = () => {
+  if (!cur) return;
+  pref.banned[cur.id] = true; delete pref.liked[cur.id];
+  pref.weight[cur.who] = Math.max(0.2, pref.weight[cur.who] - 0.2);
+  save(); renderPeople(); playNext();
+};
+document.getElementById('reset').onclick = () => {
+  if (!confirm('좋아요/별로 기록과 가중치를 초기화할까요?')) return;
+  pref = { weight:{}, off:{}, banned:{}, liked:{}, recent:[], sound:pref.sound };
+  for (const k in PEOPLE) pref.weight[k] = 1;
+  save(); renderPeople();
+};
+
+// ---- YouTube 플레이어 ----
+window.onYouTubeIframeAPIReady = () => {
+  cur = pick();
+  player = new YT.Player('yt', {
+    videoId: cur.id,
+    playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0 },
+    events: {
+      onReady: e => { applySound(); e.target.playVideo(); renderNow(); },
+      onStateChange: e => {
+        if (e.data === YT.PlayerState.ENDED) playNext();
+        if (e.data === YT.PlayerState.PLAYING) renderNow();
+      },
+      // 삭제됐거나 퍼가기 금지 영상이면 건너뜀
+      onError: () => { if (cur) pref.banned[cur.id] = true; save(); setTimeout(playNext, 300); },
+    },
+  });
+  pref.recent = [cur.id, ...pref.recent].slice(0, 40); save();
+};
+renderPeople();
+const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
+</script>
+</body>
+</html>

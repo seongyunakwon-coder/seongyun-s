@@ -1,0 +1,970 @@
+<title>그림책 서재</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: 한 번에 한 장면만 펼치는 그림책. 위는 그림, 아래는 짧은 글, 맨 아래 넘김 버튼 */
+:root {
+  --bg: #eef2ef;        /* 크레타 석회벽 */
+  --card: #ffffff;
+  --fg: #1c2a33;
+  --muted: #5a6a71;
+  --sea: #1f5f8b;       /* 에게해 */
+  --ochre: #b8772f;     /* 크레타 흙 */
+  --line: #d5ddd9;
+  --font-kid: "Jua", "Gowun Dodum", system-ui, sans-serif;
+  --font-book: "Gowun Batang", "Batang", serif;
+  --font-ui: "Gowun Dodum", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171c; --card: #172229; --fg: #e6ecea; --muted: #97a6ac; --sea: #7db4da; --ochre: #e1a560; --line: #2a3840; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f171c; --card: #172229; --fg: #e6ecea; --muted: #97a6ac; --sea: #7db4da; --ochre: #e1a560; --line: #2a3840; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 16px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 14px; }
+
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.brand { font-family: var(--font-book); font-weight: 700; font-size: 15px; color: var(--muted); letter-spacing: .02em; }
+.brand b { color: var(--fg); }
+.mode { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.mode button { border: 0; background: transparent; color: var(--muted); font: 15px var(--font-ui); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.mode button[aria-pressed="true"] { background: var(--sea); color: var(--card); }
+
+.stage { margin: 0; border-radius: 14px; overflow: hidden; background: #1b2b36; aspect-ratio: 8 / 5; max-width: 100%; }
+.stage svg { display: block; width: 100%; height: 100%; }
+
+.story { display: grid; gap: 10px; min-width: 0; }
+.chapter { font: 13px var(--font-ui); color: var(--ochre); letter-spacing: .08em; }
+.story h1, .story h2 { margin: 0; font-family: var(--font-kid); font-weight: 400; text-wrap: balance; }
+.story h1 { font-size: clamp(34px, 7vw, 52px); }
+.story h2 { font-size: clamp(24px, 4.6vw, 32px); }
+.kid { font-family: var(--font-kid); font-size: clamp(20px, 3.6vw, 25px); line-height: 1.6; margin: 0; max-width: 34em; }
+.adult { font-family: var(--font-book); font-size: 18px; line-height: 1.85; margin: 0; max-width: 36em; }
+.note { font-size: 14px; color: var(--muted); border-left: 3px solid var(--ochre); padding-left: 10px; margin: 0; max-width: 40em; line-height: 1.6; }
+body[data-mode="kid"] .adult, body[data-mode="adult"] .kid { display: none; }
+
+nav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
+nav button.turn { border: 0; background: var(--sea); color: var(--card); font: 17px var(--font-kid); padding: 12px 18px; border-radius: 12px; cursor: pointer; min-width: 88px; }
+nav button.turn:disabled { opacity: .3; cursor: default; }
+.dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.dots button { width: 10px; height: 10px; border-radius: 50%; border: 0; padding: 0; background: var(--line); cursor: pointer; }
+.dots button[aria-current="true"] { background: var(--ochre); transform: scale(1.3); }
+.count { text-align: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 4px; }
+button:focus-visible { outline: 3px solid var(--ochre); outline-offset: 2px; }
+
+/* 마지막 장 */
+.cast { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.who { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; min-width: 0; }
+.who svg { width: 64px; height: 64px; }
+.who b { font-family: var(--font-kid); font-weight: 400; font-size: 19px; display: block; }
+.who span { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.qs { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; font-size: 17px; line-height: 1.6; max-width: 36em; }
+.qs.kidq { font-family: var(--font-kid); font-size: 20px; }
+body[data-mode="kid"] .adultq, body[data-mode="adult"] .kidq { display: none; }
+
+/* 완독 플랜 */
+.paces { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.pace { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 4px; cursor: pointer; color: var(--fg); font: inherit; min-width: 0; }
+.pace b { font-family: var(--font-kid); font-weight: 400; font-size: 21px; }
+.pace span { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.pace .per { color: var(--sea); font-size: 15px; font-variant-numeric: tabular-nums; }
+.pace[aria-pressed="true"] { border: 2px solid var(--sea); padding: 13px; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; }
+.fields label { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+.fields input { font: 16px var(--font-ui); padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); width: 150px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { border: 1px solid var(--line); background: var(--card); color: var(--fg); font: 16px var(--font-ui); padding: 10px 16px; border-radius: 10px; cursor: pointer; }
+.btn.primary { background: var(--sea); border-color: var(--sea); color: var(--card); }
+.today-goal { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; }
+.today-goal .big { font-family: var(--font-kid); font-size: clamp(24px, 5vw, 32px); }
+.today-goal .big em { font-style: normal; color: var(--ochre); }
+.progress { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.progress span { display: block; height: 100%; background: var(--sea); }
+.sched-wrap { overflow-x: auto; }
+.sched { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.sched th { text-align: left; font-weight: 400; color: var(--muted); font-size: 13px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.sched td { padding: 9px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.sched tr.is-today td { background: color-mix(in srgb, var(--ochre) 14%, var(--card)); }
+.sched tr.is-done td { color: var(--muted); }
+.sched tr.is-done td.goal { text-decoration: line-through; }
+.sched tr.is-late td.when { color: var(--ochre); }
+.sched input { width: 20px; height: 20px; accent-color: var(--sea); }
+.small { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 44em; }
+
+/* 축하 */
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 140%); opacity: 0;
+  display: flex; align-items: center; gap: 12px; max-width: min(92vw, 420px); padding: 14px 18px; border-radius: 16px;
+  background: var(--fg); color: var(--bg); box-shadow: 0 10px 30px rgba(0,0,0,.25); transition: transform .35s cubic-bezier(.2,1.4,.4,1), opacity .25s; z-index: 50; }
+#toast.show { transform: translate(-50%, 0); opacity: 1; }
+#toast .t-emoji { font-size: 30px; line-height: 1; }
+#toast b { display: block; font: 400 20px var(--font-kid); }
+#toast small { display: block; font-size: 13px; opacity: .8; font-variant-numeric: tabular-nums; }
+#party { position: fixed; inset: 0; background: rgba(10,20,28,.55); display: grid; place-items: center; z-index: 60;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.party-card { background: var(--card); color: var(--fg); border-radius: 20px; padding: 28px 24px; max-width: 380px; text-align: center; display: grid; gap: 10px; justify-items: center; animation: pop .5s cubic-bezier(.2,1.5,.4,1); }
+.party-card h2 { margin: 0; font: 400 44px var(--font-kid); color: var(--ochre); }
+.party-card p { margin: 0; font-size: 16px; line-height: 1.6; }
+.party-emoji { font-size: 56px; line-height: 1; }
+#party[hidden] { display: none; }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 70; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #toast { transition: opacity .2s; } .party-card { animation: none; } }
+h3 { margin: 10px 0 0; font-family: var(--font-kid); font-weight: 400; font-size: 22px; }
+.next-read { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 16px; line-height: 1.7; max-width: 40em; }
+
+/* 움직임 */
+.wave { animation: wave 6s linear infinite; }
+@keyframes wave { to { transform: translateX(-50px); } }
+.bounce { animation: bounce 0.9s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 100%; }
+.bounce.late { animation-delay: .45s; }
+@keyframes bounce { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-14px) rotate(3deg); } }
+.float { animation: floaty 3s ease-in-out infinite; }
+.float.b { animation-delay: 1s; } .float.c { animation-delay: 2s; }
+@keyframes floaty { 0% { transform: translateY(0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
+.rain { animation: rain .7s linear infinite; }
+@keyframes rain { to { transform: translate(-10px, 40px); } }
+.shake { animation: shake .25s linear infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes shake { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@media (prefers-reduced-motion: reduce) { .wave, .bounce, .float, .rain, .shake { animation: none; } .float { opacity: 1; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="mode" id="lib" role="group" aria-label="책 고르기">
+      <button data-lib="zorba" aria-pressed="true">그리스인 조르바</button>
+      <button data-lib="karamazov" aria-pressed="false">카라마조프가의 형제들</button>
+    </div>
+    <div class="mode" role="group" aria-label="읽기 모드">
+      <button id="m-kid" aria-pressed="true">어린이</button>
+      <button id="m-adult" aria-pressed="false">어른</button>
+    </div>
+  </header>
+
+  <figure class="stage" id="stage" aria-live="polite"></figure>
+  <section class="story" id="story"></section>
+
+  <div>
+    <nav>
+      <button class="turn" id="prev">← 앞장</button>
+      <div class="dots" id="dots"></div>
+      <button class="turn" id="next">다음장 →</button>
+    </nav>
+    <div class="count" id="count"></div>
+  </div>
+</div>
+
+<script>
+// ───────── 그림 재료 ─────────
+let uid = 0;
+const P = pts => 'M' + pts.map(p => p.join(' ')).join(' L');
+function limbs(list, color, w) {
+  return list.map(pts => `<path d="${P(pts)}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
+}
+const end = pts => pts[pts.length - 1];
+
+// 조르바: 발끝이 (0,0). 큰 키, 회색 콧수염, 조끼와 붉은 허리띠
+function Z(x, y, s = 1, pose = 'stand', cls = '') {
+  const sh = [[-24, -116], [24, -116]], hp = [[-11, -60], [11, -60]];
+  const poses = {
+    stand: { la: [[-34, -62]], ra: [[34, -62]], ll: [[-13, 0]], rl: [[13, 0]] },
+    wave:  { la: [[-34, -62]], ra: [[54, -146], [58, -180]], ll: [[-13, 0]], rl: [[13, 0]] },
+    dance: { la: [[-62, -146], [-72, -178]], ra: [[62, -146], [72, -178]], ll: [[-18, 0]], rl: [[40, -28], [62, -34]] },
+    play:  { la: [[-34, -86], [-12, -82]], ra: [[34, -86], [12, -82]], ll: [[-13, 0]], rl: [[13, 0]] },
+    work:  { la: [[-34, -150], [-22, -180]], ra: [[6, -150], [-14, -176]], ll: [[-16, 0]], rl: [[16, 0]] },
+    hold:  { la: [[-34, -62]], ra: [[46, -92], [66, -84]], ll: [[-13, 0]], rl: [[13, 0]] },
+  };
+  const p = poses[pose];
+  const la = [sh[0], ...p.la], ra = [sh[1], ...p.ra], ll = [hp[0], ...p.ll], rl = [hp[1], ...p.rl];
+  const pick = pose === 'work' ? `<path d="M-20 -176 L-2 -244" stroke="#7a5230" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M-36 -236 Q-4 -258 30 -236" stroke="#8a8f94" stroke-width="7" fill="none" stroke-linecap="round"/>` : '';
+  return `<g class="${cls}"><g transform="translate(${x} ${y}) scale(${s})">
+    ${limbs([ll, rl], '#3b3f46', 15)}
+    ${[ll, rl].map(l => `<ellipse cx="${end(l)[0] + 4}" cy="${end(l)[1] + 1}" rx="11" ry="6" fill="#22201d"/>`).join('')}
+    <rect x="-28" y="-130" width="56" height="74" rx="16" fill="#efe6d2"/>
+    <path d="M-28 -112 Q-28 -130 -12 -130 L-6 -58 L-28 -58 Z" fill="#4b3222"/>
+    <path d="M28 -112 Q28 -130 12 -130 L6 -58 L28 -58 Z" fill="#4b3222"/>
+    <rect x="-28" y="-68" width="56" height="10" fill="#b23a2a"/>
+    ${pick}
+    ${limbs([la, ra], '#efe6d2', 13)}
+    ${[la, ra].map(a => `<circle cx="${end(a)[0]}" cy="${end(a)[1]}" r="7" fill="#c98a5b"/>`).join('')}
+    <rect x="-7" y="-136" width="14" height="10" fill="#c98a5b"/>
+    <circle cx="0" cy="-152" r="22" fill="#c98a5b"/>
+    <path d="M-24 -156 Q-22 -182 0 -182 Q22 -182 24 -156 Z" fill="#26231f"/>
+    <path d="M-13 -160 L-4 -158 M13 -160 L4 -158" stroke="#3a3530" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="-8" cy="-153" r="2.4" fill="#1b1b1b"/><circle cx="8" cy="-153" r="2.4" fill="#1b1b1b"/>
+    <path d="M-17 -141 Q-9 -149 0 -143 Q9 -149 17 -141 Q9 -137 0 -139 Q-9 -137 -17 -141 Z" fill="#6c6660"/>
+    <path d="M-6 -134 Q0 -130 6 -134" stroke="#7a3b2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g></g>`;
+}
+
+// 나(화자): 마른 체형, 안경, 책
+function B(x, y, s = 1, pose = 'stand', cls = '') {
+  const sh = [[-18, -112], [18, -112]], hp = [[-9, -58], [9, -58]];
+  const poses = {
+    stand: { la: [[-26, -60]], ra: [[26, -60]], ll: [[-10, 0]], rl: [[10, 0]] },
+    read:  { la: [[-24, -90], [-8, -92]], ra: [[24, -90], [8, -92]], ll: [[-10, 0]], rl: [[10, 0]] },
+    dance: { la: [[-50, -138], [-58, -168]], ra: [[50, -138], [58, -168]], ll: [[-14, 0]], rl: [[30, -26], [48, -30]] },
+    wave:  { la: [[-26, -60]], ra: [[42, -138], [46, -168]], ll: [[-10, 0]], rl: [[10, 0]] },
+  };
+  const p = poses[pose];
+  const la = [sh[0], ...p.la], ra = [sh[1], ...p.ra], ll = [hp[0], ...p.ll], rl = [hp[1], ...p.rl];
+  const book = pose === 'read' ? `<rect x="-17" y="-106" width="34" height="24" rx="2" fill="#a8372a"/><path d="M0 -106 L0 -82" stroke="#f3ead8" stroke-width="2"/>` : '';
+  return `<g class="${cls}"><g transform="translate(${x} ${y}) scale(${s})">
+    ${limbs([ll, rl], '#2f3a48', 12)}
+    ${[ll, rl].map(l => `<ellipse cx="${end(l)[0] + 3}" cy="${end(l)[1] + 1}" rx="9" ry="5" fill="#1c1c1c"/>`).join('')}
+    <rect x="-21" y="-126" width="42" height="70" rx="12" fill="#7d9cb3"/>
+    ${limbs([la, ra], '#7d9cb3', 10)}
+    ${book}
+    ${[la, ra].map(a => `<circle cx="${end(a)[0]}" cy="${end(a)[1]}" r="5.5" fill="#e5bb92"/>`).join('')}
+    <rect x="-6" y="-132" width="12" height="9" fill="#e5bb92"/>
+    <circle cx="0" cy="-146" r="19" fill="#e5bb92"/>
+    <path d="M-20 -148 Q-20 -170 0 -169 Q20 -170 20 -150 Q10 -160 -4 -157 Q-14 -156 -20 -148 Z" fill="#1d1d22"/>
+    <circle cx="-7" cy="-146" r="6" fill="none" stroke="#222" stroke-width="2"/><circle cx="7" cy="-146" r="6" fill="none" stroke="#222" stroke-width="2"/>
+    <path d="M-1 -146 L1 -146" stroke="#222" stroke-width="2"/>
+    <circle cx="-7" cy="-146" r="1.8" fill="#222"/><circle cx="7" cy="-146" r="1.8" fill="#222"/>
+    <path d="M-5 -134 Q0 -131 5 -134" stroke="#8a4a3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g></g>`;
+}
+
+// 오르탕스 부인 / 과부
+function W(x, y, s = 1, kind = 'hortense', cls = '') {
+  const h = kind === 'hortense';
+  const dress = h ? '#e48aa8' : '#202026', skin = h ? '#efc6a4' : '#ead2b8';
+  const hair = h
+    ? [[-18, -150], [18, -150], [-14, -164], [14, -164], [0, -170], [-22, -136], [22, -136]].map(([a, b]) => `<circle cx="${a}" cy="${b}" r="11" fill="#f0c64a"/>`).join('')
+    : `<path d="M-24 -126 Q-26 -172 0 -172 Q26 -172 24 -126 Q12 -118 0 -120 Q-12 -118 -24 -126 Z" fill="#141418"/>`;
+  const face = h
+    ? `<circle cx="-7" cy="-146" r="2.4" fill="#222"/><circle cx="7" cy="-146" r="2.4" fill="#222"/><circle cx="-12" cy="-139" r="4" fill="#f29bb0"/><circle cx="12" cy="-139" r="4" fill="#f29bb0"/><ellipse cx="0" cy="-134" rx="4" ry="2.6" fill="#c8283c"/>`
+    : `<path d="M-10 -145 L-4 -144 M10 -145 L4 -144" stroke="#333" stroke-width="2" stroke-linecap="round"/><path d="M-4 -133 Q0 -135 4 -133" stroke="#7a4a3a" stroke-width="2" fill="none"/>`;
+  const fan = h ? `<path d="M30 -96 L58 -122 A34 34 0 0 1 64 -84 Z" fill="#f7dbe4" stroke="#c76b8a" stroke-width="2"/>` : '';
+  return `<g class="${cls}"><g transform="translate(${x} ${y}) scale(${s})">
+    <path d="M-20 -122 L20 -122 L46 0 L-46 0 Z" fill="${dress}"/>
+    ${h ? '<path d="M-42 -14 Q-30 -4 -18 -14 Q-6 -4 6 -14 Q18 -4 30 -14 Q38 -6 44 -12" stroke="#fff3f6" stroke-width="3" fill="none"/>' : ''}
+    <path d="M-18 -116 L-34 -70 M18 -116 L32 -96" stroke="${dress}" stroke-width="11" stroke-linecap="round"/>
+    <circle cx="-34" cy="-70" r="5.5" fill="${skin}"/><circle cx="32" cy="-96" r="5.5" fill="${skin}"/>
+    ${fan}
+    ${h ? '' : hair}
+    <circle cx="0" cy="-144" r="18" fill="${skin}"/>
+    ${h ? hair : ''}
+    ${h ? `<circle cx="0" cy="-144" r="15" fill="${skin}"/>` : ''}
+    ${face}
+  </g></g>`;
+}
+
+// 마을 사람(실루엣)
+function V(x, y, s = 1, c = '#5f666b') {
+  return `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-22 0 L-18 -86 Q0 -98 18 -86 L22 0 Z" fill="${c}"/><circle cx="0" cy="-108" r="16" fill="${c}"/><path d="M-6 -102 Q0 -106 6 -102" stroke="#2b2f33" stroke-width="2" fill="none"/><path d="M-8 -112 L-3 -110 M8 -112 L3 -110" stroke="#2b2f33" stroke-width="2"/></g>`;
+}
+
+const sky = (a, b) => { const id = 'g' + (++uid); return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="800" height="500" fill="url(#${id})"/>`; };
+function waves(y, c, o = .55) { let d = `M-100 ${y}`; for (let i = 0; i < 22; i++) d += ' q12.5 -7 25 0 t25 0'; return `<path class="wave" d="${d}" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round" opacity="${o}"/>`; }
+const sea = (y, c, w) => `<rect y="${y}" width="800" height="${500 - y}" fill="${c}"/>${waves(y + 18, w)}${waves(y + 46, w, .35)}`;
+const sand = (y, c = '#e3c07e') => `<path d="M0 ${y} Q200 ${y - 22} 400 ${y - 6} T800 ${y - 10} V500 H0 Z" fill="${c}"/>`;
+const olive = (x, y, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-4 0 Q-8 -30 2 -56 L8 -56 Q2 -30 6 0 Z" fill="#6a4b2d"/><circle cx="-18" cy="-66" r="22" fill="#6e7f3c"/><circle cx="16" cy="-70" r="24" fill="#7a8c45"/><circle cx="0" cy="-88" r="22" fill="#66773a"/></g>`;
+const santuri = (x, y, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-46 0 L46 0 L30 -26 L-30 -26 Z" fill="#9a5f2f" stroke="#5e3818" stroke-width="2"/>${[-20, -14, -8, -2].map(v => `<path d="M${-44 - v * .6} ${v} L${44 + v * .6} ${v}" stroke="#f2dfb0" stroke-width="1.2"/>`).join('')}<circle cx="0" cy="-13" r="5" fill="#3a2410"/></g>`;
+const note = (x, y, cls, c = '#ffe9a8') => `<text class="float ${cls}" x="${x}" y="${y}" font-size="34" fill="${c}" font-family="serif">♪</text>`;
+function bubble(x, y, w, text, tail = 'left') {
+  const tx = tail === 'left' ? x + 24 : x + w - 24;
+  return `<g><rect x="${x}" y="${y}" width="${w}" height="46" rx="16" fill="#fffdf6" stroke="#1c2a33" stroke-width="2"/><path d="M${tx - 9} ${y + 45} L${tx} ${y + 62} L${tx + 9} ${y + 45} Z" fill="#fffdf6" stroke="#1c2a33" stroke-width="2"/><rect x="${tx - 8}" y="${y + 42}" width="16" height="5" fill="#fffdf6"/><text x="${x + w / 2}" y="${y + 30}" text-anchor="middle" font-family="Jua, sans-serif" font-size="20" fill="#1c2a33">${text}</text></g>`;
+}
+const stars = n => Array.from({ length: n }, (_, i) => `<circle cx="${(i * 137) % 800}" cy="${(i * 53) % 200 + 10}" r="${i % 3 ? 1.4 : 2.2}" fill="#fdf6d8" opacity=".8"/>`).join('');
+const svg = inner => `<svg viewBox="0 0 800 500" role="img" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+
+// 카페 배경(1, 2장 공통)
+function cafe(withRain = true) {
+  const id = 'c' + (++uid);
+  const rain = withRain ? Array.from({ length: 26 }, (_, i) => `<path class="rain" d="M${480 + (i * 37) % 260} ${70 + (i * 29) % 190} l-6 18" stroke="#cfe0ea" stroke-width="2" opacity=".7"/>`).join('') : '';
+  return `<rect width="800" height="500" fill="#3c4a53"/><rect y="400" width="800" height="100" fill="#2a2f33"/>
+    <defs><clipPath id="${id}"><rect x="470" y="60" width="270" height="210" rx="6"/></clipPath></defs>
+    <g clip-path="url(#${id})"><rect x="470" y="60" width="270" height="210" fill="#8ea3ad"/><rect x="470" y="200" width="270" height="70" fill="#4f6d7f"/>
+      <path d="M560 200 L640 200 L628 214 L572 214 Z" fill="#2b3237"/><rect x="590" y="176" width="8" height="24" fill="#2b3237"/><path d="M598 180 L598 168" stroke="#2b3237" stroke-width="3"/>${rain}</g>
+    <rect x="470" y="60" width="270" height="210" rx="6" fill="none" stroke="#7a5a3a" stroke-width="10"/><path d="M605 60 V270 M470 165 H740" stroke="#7a5a3a" stroke-width="6"/>
+    <path d="M200 0 V60" stroke="#222" stroke-width="2"/><path d="M178 60 H222 L210 80 H190 Z" fill="#d8a54a"/><circle cx="200" cy="86" r="10" fill="#ffe7a3" opacity=".7"/>`;
+}
+const table = (x, w = 260) => `<rect x="${x}" y="372" width="${w}" height="14" rx="4" fill="#8a5a33"/><rect x="${x + w / 2 - 8}" y="386" width="16" height="84" fill="#6a4426"/><rect x="${x + w / 2 - 40}" y="466" width="80" height="8" rx="4" fill="#6a4426"/>`;
+
+// ───────── 장면 ─────────
+const scenes = {
+  cover: () => svg(sky('#2b3a67', '#f19a5b') + `<circle cx="600" cy="330" r="70" fill="#ffd27a" opacity=".9"/>` + sea(330, '#1f4f73', '#ffd9a0') + sand(440, '#d9a964') +
+    Z(330, 450, 1.45, 'dance', 'bounce') + B(560, 452, .9, 'read') + santuri(150, 440, 1) + note(250, 170, 'a') + note(420, 150, 'b') + note(200, 120, 'c')),
+
+  port: () => svg(cafe() + B(320, 470, 1.15, 'read') + table(180) + `<rect x="226" y="352" width="22" height="20" rx="3" fill="#f3ead8"/><path d="M248 358 q8 0 8 8 q0 6 -8 6" stroke="#f3ead8" stroke-width="3" fill="none"/>` +
+    bubble(70, 120, 210, '나는 책벌레일까?', 'right')),
+
+  meet: () => svg(cafe(false) + `<path d="M40 110 H180 V400 H40 Z" fill="#f2d9a0"/><path d="M40 110 H180 V400 H40 Z" fill="none" stroke="#7a5a3a" stroke-width="8"/>` +
+    Z(140, 470, 1.45, 'wave') + B(600, 470, 1, 'stand') + table(500, 200) + bubble(200, 70, 260, '나도 데려가 주시오!')),
+
+  santuri: () => svg(sky('#5a2e2a', '#c4683a') + `<rect y="400" width="800" height="100" fill="#4a2a1c"/><circle cx="640" cy="120" r="46" fill="#ffd27a" opacity=".35"/>` +
+    Z(380, 470, 1.5, 'play') + santuri(380, 352, 1) + note(470, 220, 'a') + note(270, 200, 'b') + note(520, 150, 'c') + note(240, 130, 'a') +
+    bubble(470, 70, 280, '내키면 연주하지!', 'left')),
+
+  crete: () => svg(sky('#8fcbe3', '#d9eef3') + `<circle cx="660" cy="80" r="36" fill="#fff2b8"/>` +
+    `<path d="M0 260 L120 150 L210 220 L330 110 L470 240 L560 170 L700 250 L800 210 V320 H0 Z" fill="#b98a55"/><path d="M0 300 L140 230 L300 290 L460 240 L640 300 L800 270 V330 H0 Z" fill="#9c7444"/>` +
+    olive(110, 310, .8) + olive(260, 300, .6) + olive(620, 315, .75) + `<rect x="360" y="270" width="60" height="40" fill="#f3efe6"/><rect x="384" y="286" width="12" height="24" fill="#2f6f9e"/><rect x="430" y="282" width="40" height="28" fill="#f3efe6"/>` +
+    sea(320, '#1f6a9a', '#d7f0ff') + `<g transform="translate(330 395)"><path d="M-110 0 L110 0 L84 36 L-84 36 Z" fill="#c9562f"/><rect x="-110" y="-4" width="220" height="8" fill="#f3efe6"/></g>` +
+    Z(290, 398, .48, 'wave') + B(380, 398, .5, 'stand')),
+
+  hortense: () => svg(sky('#a8d6e8', '#e8f4f6') + `<rect x="80" y="120" width="380" height="290" fill="#f3efe6"/><path d="M60 120 L270 50 L480 120 Z" fill="#c6694a"/>` +
+    `<rect x="230" y="270" width="70" height="140" rx="30" fill="#2f6f9e"/><rect x="120" y="180" width="70" height="60" fill="#2f6f9e"/><rect x="340" y="180" width="70" height="60" fill="#2f6f9e"/><rect x="190" y="138" width="150" height="30" rx="4" fill="#1c2a33"/><text x="265" y="160" text-anchor="middle" font-family="Gowun Batang, serif" font-size="18" fill="#f3d68a">HOTEL</text>` +
+    `<rect y="410" width="800" height="90" fill="#e1c48d"/>` + [100, 140, 400, 440].map(x => `<circle cx="${x}" cy="406" r="12" fill="#d9405f"/><circle cx="${x + 14}" cy="410" r="10" fill="#f08aa0"/>`).join('') +
+    W(560, 470, 1.4, 'hortense') + Z(700, 470, 1.3, 'wave') + bubble(470, 40, 230, '부불리나!', 'right')),
+
+  mine: () => svg(sky('#b9dbe6', '#eef6f2') + `<path d="M0 140 Q180 60 380 120 L460 420 H0 Z" fill="#8b6a45"/><path d="M90 420 V280 Q160 210 230 280 V420 Z" fill="#1b1612"/><path d="M84 420 V276 Q160 200 236 276 V420" fill="none" stroke="#6b4a2a" stroke-width="14"/>` +
+    `<rect y="410" width="800" height="90" fill="#a98a5c"/><path d="M60 450 H460 M60 470 H460" stroke="#5a4632" stroke-width="4"/><rect x="250" y="410" width="80" height="36" rx="4" fill="#5c6670"/><circle cx="268" cy="450" r="9" fill="#2a2a2a"/><circle cx="312" cy="450" r="9" fill="#2a2a2a"/><path d="M256 412 Q290 394 324 412" fill="#2c2420"/>` +
+    Z(380, 470, 1.3, 'work') + olive(640, 430, 1.6) + B(640, 470, 1, 'read') + bubble(400, 40, 340, '사는 법이 책에 다 나와 있소?', 'left')),
+
+  dance: () => svg(sky('#0e1630', '#27406b') + stars(40) + `<circle cx="640" cy="90" r="34" fill="#f6eecb"/>` + sea(300, '#16304f', '#9fc3e0') + sand(420, '#c7a26a') +
+    `<g transform="translate(560 450)"><path d="M-26 0 L26 0" stroke="#5a3a22" stroke-width="10"/><path d="M-18 -4 Q0 -64 18 -4 Z" fill="#f08a3c"/><path d="M-9 -4 Q0 -40 9 -4 Z" fill="#ffd36a"/></g>` +
+    Z(330, 455, 1.45, 'dance', 'bounce') + B(690, 455, .9, 'stand') + bubble(60, 60, 330, '말로 못 하면 춤을 추는 거요!', 'right')),
+
+  widow: () => svg(sky('#8d979c', '#c9cfd0') + `<path d="M0 260 Q260 170 520 230 T800 210 V500 H0 Z" fill="#9c8f78"/>` +
+    [[60, 220], [140, 205], [600, 200], [680, 215]].map(([x, y]) => `<rect x="${x}" y="${y}" width="64" height="50" fill="#ece8de"/><rect x="${x + 24}" y="${y + 22}" width="14" height="28" fill="#5f7380"/>`).join('') +
+    `<rect x="360" y="170" width="80" height="60" fill="#ece8de"/><path d="M360 172 Q400 120 440 172 Z" fill="#6f8796"/><path d="M400 120 V100 M392 108 H408" stroke="#5a5a5a" stroke-width="3"/>` +
+    `<rect y="420" width="800" height="80" fill="#857a66"/>` + W(230, 470, 1.35, 'widow') + V(480, 470, 1.05) + V(560, 470, 1.15, '#6b7176') + V(640, 470, 1, '#585e63') + V(720, 470, 1.1, '#666c71') +
+    `<path d="M330 330 Q400 300 440 330" stroke="#3a3f43" stroke-width="3" fill="none" stroke-dasharray="6 6"/>`),
+
+  farewell: () => svg(`<rect width="800" height="500" fill="#2f2a33"/><rect x="560" y="60" width="180" height="170" fill="#495a7a"/><circle cx="650" cy="120" r="20" fill="#f6eecb"/><path d="M560 60 H740 V230 H560 Z" fill="none" stroke="#6b4e34" stroke-width="10"/>` +
+    [[580, 160], [620, 150], [680, 160]].map(([x, y]) => `<circle cx="${x}" cy="${y + 30}" r="16" fill="#5f666b"/>`).join('') +
+    `<rect y="430" width="800" height="70" fill="#231f26"/>` + Z(330, 440, 1.15, 'hold') + `<rect x="120" y="330" width="420" height="70" rx="8" fill="#e8dfd0"/><rect x="120" y="390" width="420" height="20" fill="#7a5a3a"/><rect x="130" y="410" width="14" height="60" fill="#5a3f28"/><rect x="516" y="410" width="14" height="60" fill="#5a3f28"/>` +
+    `<ellipse cx="175" cy="330" rx="42" ry="18" fill="#ffffff"/><circle cx="160" cy="318" r="13" fill="#f0c64a"/><circle cx="180" cy="312" r="13" fill="#f0c64a"/><circle cx="172" cy="324" r="13" fill="#efc6a4"/><path d="M166 324 L170 325 M176 324 L180 325" stroke="#333" stroke-width="2"/>` +
+    `<path d="M200 330 Q330 306 520 336" stroke="#e48aa8" stroke-width="40" fill="none" stroke-linecap="round" opacity=".9"/>` +
+    `<g transform="translate(80 430)"><rect x="-6" y="-60" width="12" height="60" fill="#f3ead8"/><path d="M0 -60 Q-8 -76 0 -88 Q8 -76 0 -60 Z" fill="#ffc94a"/><circle cx="0" cy="-74" r="30" fill="#ffd27a" opacity=".18"/></g>`),
+
+  cable: () => svg(sky('#9fd0e8', '#e9f4f4') + `<path d="M0 60 L140 20 L240 120 L120 300 L0 300 Z" fill="#7d6a4f"/><path d="M0 300 Q300 260 800 330 V500 H0 Z" fill="#b38f5e"/>` +
+    sea(430, '#1f6a9a', '#d7f0ff') +
+    `<path d="M150 70 L330 190 L510 300 L700 410" stroke="#3a3a3a" stroke-width="3" fill="none"/>` +
+    `<g class="shake"><rect x="320" y="180" width="10" height="110" fill="#5a3f28" transform="rotate(14 325 290)"/></g><g class="shake"><rect x="505" y="292" width="10" height="100" fill="#5a3f28" transform="rotate(-22 510 392)"/></g>` +
+    [[230, 120, 30], [420, 220, -20], [600, 330, 55], [690, 260, -40]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><rect x="-48" y="-11" width="96" height="22" rx="11" fill="#8a5a33"/><circle cx="48" cy="0" r="11" fill="#c9965e"/></g>`).join('') +
+    [[640, 300], [700, 240], [610, 360], [460, 210]].map(([x, y]) => `<path d="M${x} ${y} l14 -14 M${x} ${y} l18 4 M${x} ${y} l4 18" stroke="#ff9d2e" stroke-width="3" stroke-linecap="round"/>`).join('') +
+    `<text x="520" y="120" font-family="Jua, sans-serif" font-size="64" fill="#b23a2a" transform="rotate(-8 520 120)">와르르!</text>` +
+    [[150, 300], [180, 302], [210, 298]].map(([x, y]) => V(x, y, .45, '#1f1f24')).join('') +
+    `<path d="M0 410 H230 Q270 440 250 500 H0 Z" fill="#b38f5e"/>` + Z(80, 470, .9, 'stand') + B(165, 470, .8, 'stand')),
+
+  together: () => svg(sky('#f2a65a', '#fbe2b0') + `<circle cx="400" cy="300" r="90" fill="#ffd27a" opacity=".85"/>` + sea(300, '#2b6a8c', '#ffe3b0') + sand(420, '#e3bf80') +
+    `<g transform="translate(130 450) rotate(-12)"><rect x="-50" y="-11" width="100" height="22" rx="11" fill="#8a5a33"/></g><g transform="translate(700 456) rotate(18)"><rect x="-44" y="-10" width="88" height="20" rx="10" fill="#8a5a33"/></g>` +
+    Z(310, 458, 1.35, 'dance', 'bounce') + B(500, 458, 1.15, 'dance', 'bounce late') + bubble(400, 50, 300, '나에게도 춤을 가르쳐 줘요!', 'left')),
+
+  letter: () => svg(`<rect width="800" height="500" fill="#3a3f4a"/><rect x="520" y="50" width="220" height="180" fill="#9fc1d8"/><path d="M520 180 L590 120 L650 160 L740 100 V230 H520 Z" fill="#6c7d5a"/><path d="M520 50 H740 V230 H520 Z" fill="none" stroke="#6b4e34" stroke-width="10"/>` +
+    `<path d="M0 300 H800 V500 H0 Z" fill="#7a5233"/><path d="M0 300 H800" stroke="#5a3a22" stroke-width="6"/>` +
+    santuri(250, 400, 2.2) +
+    `<g transform="translate(560 390) rotate(-6)"><rect x="-110" y="-70" width="220" height="150" fill="#f6efdf"/>${[-40, -18, 4, 26, 48].map(y => `<path d="M-86 ${y} H${y > 30 ? 30 : 86}" stroke="#8a8173" stroke-width="3" stroke-linecap="round"/>`).join('')}<text x="-86" y="-48" font-family="Gowun Batang, serif" font-size="16" fill="#5a4b3a">친애하는 조르바의 벗에게</text></g>` +
+    `<g transform="translate(90 300)"><rect x="-6" y="-60" width="12" height="60" fill="#f3ead8"/><path d="M0 -60 Q-8 -76 0 -88 Q8 -76 0 -60 Z" fill="#ffc94a"/><circle cx="0" cy="-74" r="34" fill="#ffd27a" opacity=".18"/></g>`),
+};
+
+// ───────── 이야기 ─────────
+const PAGES_Z = [
+  { scene: 'cover', cover: true,
+    kid: '책 읽기 싫은 사람도 10분이면 끝나는 그림책이에요. 오른쪽 아래 "다음장"을 눌러 보세요.',
+    adult: '니코스 카잔차키스의 1946년 소설을 14장의 그림으로 줄였습니다. 줄거리를 먼저 알고 나면 원작의 긴 대화와 생각들이 훨씬 잘 읽힙니다.' },
+  { scene: 'port', chapter: '1장 · 비 오는 항구', title: '책벌레 청년',
+    kid: '비가 오는 새벽, 항구의 작은 카페. 책을 좋아하는 청년 "나"는 크레타섬으로 가는 배를 기다리고 있었어요. 떠나간 친구는 "나"를 책벌레라고 놀렸지요.',
+    adult: '화자는 머리로만 사는 젊은 지식인입니다. 붓다에 관한 원고를 붙들고 있지만 삶을 몸으로 살아 본 적은 별로 없습니다. 크레타의 갈탄 광산을 빌려 사람들 속에서 일하며 살아 보기로 하는데, 떠난 친구가 남긴 "책벌레"라는 말이 계속 마음에 걸립니다.' },
+  { scene: 'meet', chapter: '2장 · 낯선 사내', title: '조르바가 나타났다',
+    kid: '그때 키가 크고 콧수염이 멋진 할아버지가 다가왔어요. "나도 데려가 주시오! 요리도 하고 광산 일도 잘하오." 그의 이름은 조르바였어요.',
+    adult: '예순이 넘은 떠돌이 노동자 조르바는 일자리를 구걸하지 않습니다. 마음이 내키면 하고, 아니면 안 합니다. 화자는 이 낯선 사내에게 단번에 끌립니다. 책에 없는 무언가를 가진 사람이었기 때문입니다.' },
+  { scene: 'santuri', chapter: '3장 · 산투리', title: '마음이 내켜야 연주하지',
+    kid: '조르바는 "산투리"라는 악기를 늘 들고 다녀요. 하지만 아무 때나 연주하지 않아요. "마음이 내켜야 연주하지. 나는 자유로운 사람이니까!"',
+    adult: '조르바에게 자유는 거창한 이념이 아닙니다. 하고 싶을 때 하고, 하기 싫으면 누구 앞에서도 하지 않는 것입니다. 줄을 두드려 소리를 내는 그리스 악기 산투리는 그 자유의 상징이고, 이야기 마지막에 다시 등장합니다.' },
+  { scene: 'crete', chapter: '4장 · 크레타', title: '바다 건너 크레타섬으로',
+    kid: '두 사람은 배를 타고 크레타섬에 도착했어요. 올리브 나무와 바위산, 그리고 끝없이 파란 바다가 기다리고 있었어요.',
+    adult: '크레타는 작가 카잔차키스의 고향입니다. 오래된 전통과 엄격한 마을 질서가 살아 있는 곳이지요. 아름다운 풍경 뒤에 숨은 이 공동체의 거친 얼굴은 뒤에서 비극으로 드러납니다.' },
+  { scene: 'hortense', chapter: '5장 · 바닷가 여관', title: '오르탕스 부인',
+    kid: '바닷가 여관에는 오르탕스 부인이 살았어요. 옛날엔 반짝반짝 빛나던 가수였대요. 조르바는 부인을 "부불리나"라고 부르며 다정하게 대해 주었어요.',
+    adult: '늙고 외로운 오르탕스 부인은 지나간 영광의 기억으로 삽니다. 조르바는 그녀를 비웃지 않고, 그녀가 듣고 싶은 말을 해 줍니다. 거칠지만 사람에게 한없이 다정한 조르바의 한 면입니다.' },
+  { scene: 'mine', chapter: '6장 · 광산', title: '책에 다 나와 있소?',
+    kid: '조르바는 광산에서 땀 흘리며 일했어요. "나"는 나무 그늘에서 책을 썼고요. 어느 날 조르바가 물었어요. "사는 법이 책에 다 나와 있소?"',
+    adult: '광산은 핑계일 뿐, 이 소설의 진짜 이야기는 두 사람의 대화입니다. 조르바는 배운 게 없어도 삶에 대한 질문을 정확히 던집니다. 화자는 그 앞에서 자기 지식이 얼마나 머리로만 된 것인지 깨닫기 시작합니다.' },
+  { scene: 'dance', chapter: '7장 · 밤바다', title: '조르바의 춤',
+    kid: '어느 밤, 조르바가 바닷가에서 춤을 추기 시작했어요. "말로 다 못 하겠으면 춤을 추는 거요!" 기쁠 때도, 슬플 때도 조르바는 춤을 췄어요.',
+    adult: '조르바는 말이 모자랄 때 몸으로 말합니다. 어린 아들을 잃었을 때도 춤을 췄다고 고백하지요. 슬픔을 피하지 않고 온몸으로 통과하는 방식, 그것이 조르바의 춤입니다.' },
+  { scene: 'widow', chapter: '8장 · 마을', title: '미움이 만든 슬픈 일',
+    kid: '마을에는 혼자 사는 아름다운 여인이 있었어요. 마을 사람들은 그녀를 미워했어요. 질투와 미움은 결국 아주 슬픈 일을 만들었어요. "나"는 아무것도 하지 못했지요.',
+    adult: '젊은 과부는 마을 남자들의 욕망과 여자들의 질투를 한 몸에 받습니다. 그녀를 사랑하던 청년이 스스로 목숨을 끊자, 마을은 책임을 그녀에게 돌리고 끝내 그녀를 죽입니다. 조르바는 맞서고 화자는 얼어붙습니다. 집단의 폭력 앞에서 지식인이 얼마나 무력한지 드러나는 장면입니다.',
+    note: '아이와 함께 읽을 때: 이 장면은 "여럿이 한 사람을 미워하면 어떤 일이 생길까?"를 이야기해 보는 기회로 쓰면 좋아요.' },
+  { scene: 'farewell', chapter: '9장 · 마지막 곁', title: '끝까지 곁에 있어 준 사람',
+    kid: '오르탕스 부인이 많이 아팠어요. 창밖에서 사람들이 기웃거렸지만, 부인의 손을 잡아 준 건 조르바뿐이었어요.',
+    adult: '부인이 숨을 거두기도 전에 마을 사람들은 그녀의 물건을 노립니다. 조르바는 그 탐욕 한가운데서 그녀의 손을 잡아 줍니다. 죽음 앞에서 마을과 조르바의 태도가 정반대로 놓입니다.' },
+  { scene: 'cable', chapter: '10장 · 대작전', title: '와르르, 전부 무너졌다',
+    kid: '조르바의 큰 계획! 산꼭대기의 통나무를 줄에 매달아 바닷가까지 내려보내는 거예요. 그런데… 쿵! 와르르! 전부 무너지고 말았어요.',
+    adult: '산에서 나무를 끌어내릴 케이블 설비는 모든 돈을 건 승부였습니다. 개통식 날, 통나무는 불꽃을 튀기며 날아가고 기둥은 하나씩 쓰러집니다. 전 재산이 사라진 순간, 두 사람은 절망 대신 웃음을 택합니다.' },
+  { scene: 'together', chapter: '11장 · 해 질 녘', title: '나에게도 춤을 가르쳐 줘요',
+    kid: '"나"는 조르바에게 말했어요. "나에게도 춤을 가르쳐 줘요!" 둘은 바닷가에서 함께 춤추며 크게 웃었어요. 다 잃었는데도 마음은 가벼웠어요.',
+    adult: '이 장면이 소설의 심장입니다. 실패의 한가운데서 화자는 처음으로 머리가 아니라 몸으로 삽니다. 아무것도 남지 않았을 때 오히려 자유로워지는 역설, 화자가 조르바에게 배운 것은 바로 이것입니다.' },
+  { scene: 'letter', chapter: '12장 · 편지', title: '산투리를 남기고',
+    kid: '두 사람은 헤어졌어요. 몇 년 뒤 편지 한 통이 왔어요. 조르바가 세상을 떠났고, 아끼던 산투리를 "나"에게 남겼다고요.',
+    adult: '조르바는 마지막 순간에도 창가에 서서 먼 산을 바라보며 떠났다고 전해집니다. 화자는 그를 붙잡아 두는 방법으로 이 이야기를 쓰기로 합니다. 우리가 방금 넘겨 본 이야기가 바로 그 기록입니다.' },
+  { end: true },
+  { plan: true },
+];
+
+// ───────── 마지막 장 ─────────
+const mini = (fn, ...a) => `<svg viewBox="-60 -200 120 120" aria-hidden="true">${fn(0, 0, 1, ...a)}</svg>`;
+const ENDING_Z = `
+  <div class="chapter">책을 덮기 전에</div>
+  <h2>이제 진짜 책을 펼쳐 볼까요?</h2>
+  <div class="cast">
+    <div class="who">${mini(Z, 'stand')}<div><b>조르바</b><span>하고 싶을 때 하고, 슬프면 춤추는 자유인</span></div></div>
+    <div class="who">${mini(B, 'read')}<div><b>나</b><span>책으로만 세상을 알던 젊은 지식인</span></div></div>
+    <div class="who">${mini(W, 'hortense')}<div><b>오르탕스 부인</b><span>옛 영광을 그리워하는 여관 주인</span></div></div>
+    <div class="who">${mini(W, 'widow')}<div><b>마을의 과부</b><span>마을의 미움을 한 몸에 받은 여인</span></div></div>
+  </div>
+  <h3>함께 이야기해 봐요</h3>
+  <ol class="qs kidq">
+    <li>조르바는 왜 마음이 내킬 때만 산투리를 연주했을까요?</li>
+    <li>다 망했는데 두 사람은 왜 웃으며 춤을 췄을까요?</li>
+    <li>여러분은 어떤 때 춤추고 싶어지나요?</li>
+  </ol>
+  <ol class="qs adultq">
+    <li>화자가 마을 과부의 일 앞에서 얼어붙은 이유는 무엇일까. 나라면 어땠을까.</li>
+    <li>모든 걸 잃은 날의 춤은 체념일까, 해방일까.</li>
+    <li>내 삶에서 "책으로만 안 것"과 "몸으로 겪은 것"은 각각 무엇인가.</li>
+  </ol>
+  <h3>원작은 이렇게 읽어 보세요</h3>
+  <div class="next-read">
+    처음부터 끝까지 읽기 부담스러우면, 이 그림책의 10~11장에 해당하는 케이블이 무너진 뒤 바닷가 장면부터 읽어 보세요. 소설에서 가장 유명한 대목입니다.
+    그다음 앞으로 돌아가 1장부터 읽으면 조르바의 말 하나하나가 훨씬 생생하게 들립니다.<br><br>
+    작가 니코스 카잔차키스(1883–1957)는 크레타 출신입니다. 그의 묘비에는 "아무것도 바라지 않는다, 아무것도 두렵지 않다, 나는 자유다"라는 뜻의 글이 새겨져 있습니다.
+  </div>
+  <div class="actions"><button class="btn primary" id="to-plan">완독 플랜 짜기 →</button></div>`;
+
+// ───────── 완독 플랜 ─────────
+// 권이 여러 개인 책은 전체를 이어진 쪽수(1권 1쪽 = 1)로 계산하고, 화면에는 "2권 120쪽"처럼 보여 줌
+const BOOKS = {
+  zorba: { title: '그리스인 조르바', pub: '열린책들 세계문학 21 · 이윤기 옮김', vols: [482], doc: 'reading-plan', ls: 'zorba-plan',
+    finish: '조르바의 산투리 소리가 들리나요?',
+    note: '전체 쪽수에는 책 끝의 작품 해설과 연보도 들어 있어요. 본문만 읽으려면 본문이 끝나는 쪽으로 바꿔 넣으세요.' },
+  karamazov: { title: '카라마조프가의 형제들', pub: '민음사 세계문학전집 · 김연경 옮김 · 전 3권', vols: [593, 479, 581], doc: 'reading-plan-karamazov', ls: 'karamazov-plan',
+    finish: '드미트리, 이반, 알료샤와 긴 여정을 함께했어요.',
+    note: '권별 쪽수는 알라딘 상품 정보 기준이에요. 3권 끝의 작품 해설과 연보까지 들어 있으니, 본문만 읽으려면 3권 쪽수를 본문 끝 쪽으로 바꿔 넣으세요.' },
+};
+const PACES = {
+  7:  { name: '1주 몰입', tip: '주말을 끼워 단숨에. 이야기 흐름이 끊기지 않아요.' },
+  14: { name: '2주 균형', tip: '출퇴근길이나 잠들기 전에 꾸준히.' },
+  30: { name: '한 달 습관', tip: '조금씩 매일. 책 읽는 습관을 만들기 좋아요.' },
+};
+const MIN_PER_PAGE = 1.3; // 소설 한 쪽을 읽는 데 드는 대략적인 시간(분)
+const DOWK = ['일', '월', '화', '수', '목', '금', '토'];
+const p2 = n => String(n).padStart(2, '0');
+const keyOf = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const TODAYK = keyOf(new Date());
+const sum = a => a.reduce((x, y) => x + y, 0);
+
+const planStore = {
+  db: null, uid: null,
+  async get(b) {
+    if (this.db) { const s = await this.db.collection('data/users/' + this.uid).doc(BOOKS[b].doc).get(); return s.exists ? s.data() : null; }
+    try { return JSON.parse(localStorage.getItem(BOOKS[b].ls)); } catch { return null; }
+  },
+  async set(b, v) {
+    if (this.db) return this.db.collection('data/users/' + this.uid).doc(BOOKS[b].doc).set(v);
+    try { localStorage.setItem(BOOKS[b].ls, JSON.stringify(v)); } catch {}
+  },
+  async clear(b) {
+    if (this.db) return this.db.collection('data/users/' + this.uid).doc(BOOKS[b].doc).delete();
+    try { localStorage.removeItem(BOOKS[b].ls); } catch {}
+  },
+};
+let cur = 'zorba';
+try { if (BOOKS[localStorage.getItem('plan-book')]) cur = localStorage.getItem('plan-book'); } catch {}
+const plans = {}, drafts = {};
+let planLoaded = false, planNote = '';
+for (const b in BOOKS) drafts[b] = { days: 14, start: TODAYK, vols: [...BOOKS[b].vols], fromVol: 1, fromPage: 0 };
+
+// 이어진 쪽수 ↔ 권·쪽
+function volsOf(p) { return p.vols || [p.total]; }
+function loc(vols, g) { let v = 0; while (v < vols.length - 1 && g > vols[v]) { g -= vols[v]; v++; } return { v: v + 1, p: g }; }
+function at(vols, g) { const l = loc(vols, g); return vols.length > 1 ? `${l.v}권 ${l.p}쪽` : `${l.p}쪽`; }
+function range(vols, a, b) {
+  const x = loc(vols, a), y = loc(vols, b);
+  if (vols.length === 1) return `p.${x.p}–${y.p}`;
+  return x.v === y.v ? `${x.v}권 p.${x.p}–${y.p}` : `${x.v}권 p.${x.p} → ${y.v}권 p.${y.p}`;
+}
+
+// 쪽수를 날짜별로 고르게 나눔 (누적 목표를 반올림해 마지막 날 정확히 끝나게)
+function segments(fromPage, total, startKey, days) {
+  const n = total - fromPage + 1, out = [];
+  let prev = fromPage - 1;
+  for (let i = 0; i < days; i++) {
+    const to = fromPage - 1 + Math.round(n * (i + 1) / days);
+    out.push({ date: keyOf(addDays(parseKey(startKey), i)), from: prev + 1, to, done: false });
+    prev = to;
+  }
+  return out.filter(s => s.to >= s.from);
+}
+function readTo(p) { return p.segs.filter(s => s.done).reduce((m, s) => Math.max(m, s.to), p.from - 1); }
+function draftFrom(d) { return sum(d.vols.slice(0, d.fromVol - 1)) + d.fromPage + 1; }
+
+function bookTabs() {
+  return `<div class="mode" role="group" aria-label="책 고르기" style="justify-self:start;flex-wrap:wrap">${Object.entries(BOOKS).map(([k, b]) =>
+    `<button class="booktab" data-book="${k}" aria-pressed="${k === cur}">${b.title}</button>`).join('')}</div>`;
+}
+
+function planHTML() {
+  const B = BOOKS[cur];
+  if (!planLoaded) return `<div class="chapter">완독 플랜</div>${bookTabs()}<h2>불러오는 중…</h2>`;
+  const plan = plans[cur];
+  if (!plan) {
+    const d = drafts[cur], total = sum(d.vols), left = total - draftFrom(d) + 1;
+    const per = n => Math.ceil(left / n);
+    const multi = d.vols.length > 1;
+    return `<div class="chapter">완독 플랜</div>${bookTabs()}<h2>${B.title}, 끝까지 읽어 볼까요?</h2>
+      <p class="adult" style="display:block">${B.pub} 기준 ${multi ? d.vols.map((v, i) => `${i + 1}권 ${v}쪽`).join(', ') + `, 모두 ${total}쪽` : `전체 ${total}쪽`}입니다.${left < total ? ` 이미 읽은 곳을 빼면 ${left}쪽 남았어요.` : ''} 기간을 고르면 날짜마다 "오늘은 어디까지"를 정해 드려요.</p>
+      <div class="paces">${Object.entries(PACES).map(([n, p]) => `<button class="pace" data-days="${n}" aria-pressed="${+n === d.days}"><b>${p.name}</b><span class="per">하루 약 ${per(+n)}쪽 · 대략 ${Math.round(per(+n) * MIN_PER_PAGE)}분</span><span>${p.tip}</span></button>`).join('')}</div>
+      <div class="fields">
+        <label>시작일<input type="date" id="pl-start" value="${d.start}"></label>
+        ${d.vols.map((v, i) => `<label>${multi ? `${i + 1}권 쪽수` : '전체 쪽수'}<input type="number" class="pl-vol" data-v="${i}" min="10" max="3000" value="${v}"></label>`).join('')}
+      </div>
+      <div class="fields">
+        ${multi ? `<label>지금 읽고 있는 권<select id="pl-fromvol" style="font:16px var(--font-ui);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);width:150px">${d.vols.map((_, i) => `<option value="${i + 1}" ${d.fromVol === i + 1 ? 'selected' : ''}>${i + 1}권</option>`).join('')}</select></label>` : ''}
+        <label>${multi ? '그 권에서 읽은 쪽' : '이미 읽은 쪽'}<input type="number" id="pl-from" min="0" max="3000" value="${d.fromPage}"></label>
+      </div>
+      <div class="actions"><button class="btn primary" id="pl-make">이 일정으로 시작하기</button></div>
+      <p class="small">${B.note} 읽는 시간은 한 쪽에 1분 20초 정도로 잡은 어림값이에요.</p>`;
+  }
+  const vols = volsOf(plan), total = plan.total, done = readTo(plan);
+  const pct = Math.round((done - plan.from + 1) / (total - plan.from + 1) * 100);
+  const todaySeg = plan.segs.find(s => s.date === TODAYK);
+  const late = plan.segs.filter(s => s.date < TODAYK && !s.done);
+  const last = plan.segs[plan.segs.length - 1];
+  const pos = done >= plan.from ? at(vols, done) : (plan.from > 1 ? at(vols, plan.from - 1) : '시작 전');
+  let headline;
+  if (done >= total) headline = `<span class="big">완독했어요!</span><span>${B.finish}</span>`;
+  else if (todaySeg && !todaySeg.done) headline = `<span class="big">오늘은 <em>${at(vols, todaySeg.to)}</em>까지</span><span>${range(vols, todaySeg.from, todaySeg.to)}, ${todaySeg.to - todaySeg.from + 1}쪽. 대략 ${Math.round((todaySeg.to - todaySeg.from + 1) * MIN_PER_PAGE)}분이면 돼요.${loc(vols, todaySeg.from).v !== loc(vols, todaySeg.to).v ? ' 오늘 다음 권으로 넘어가요.' : ''}</span>`;
+  else if (todaySeg && todaySeg.done) headline = `<span class="big">오늘 분량 끝!</span><span>${at(vols, done)}까지 읽었어요. ${done > todaySeg.to ? '목표보다 앞서 가고 있어요.' : '내일 다시 만나요.'}</span>`;
+  else if (TODAYK < plan.segs[0].date) headline = `<span class="big"><em>${plan.segs[0].date.slice(5).replace('-', '/')}</em>에 시작해요</span><span>첫날은 ${at(vols, plan.segs[0].to)}까지예요.</span>`;
+  else headline = `<span class="big">계획한 날이 지났어요</span><span>남은 ${total - done}쪽을 다시 나눠 볼까요?</span>`;
+  return `<div class="chapter">완독 플랜 · ${PACES[plan.days]?.name || plan.days + '일'}</div>${bookTabs()}<h2>${B.title} 완독까지</h2>
+    <div class="today-goal">${headline}
+      <div class="progress" aria-label="진행률 ${pct}%"><span style="width:${pct}%"></span></div>
+      <span class="small">지금 ${pos} · 전체 ${total}쪽 중 ${pct}% · 마지막 날 ${last.date.slice(5).replace('-', '/')}</span>
+    </div>
+    ${planNote ? `<p class="note">${planNote}</p>` : ''}
+    ${late.length && done < total ? `<p class="note">지난 날짜 중 ${late.length}일 분량이 체크되지 않았어요. 읽었다면 체크하고, 밀렸다면 남은 분량을 오늘부터 다시 나눌 수 있어요.</p><div class="actions"><button class="btn primary" id="pl-rebase">오늘부터 다시 나누기</button></div>` : ''}
+    <div class="sched-wrap"><table class="sched">
+      <thead><tr><th>날짜</th><th>읽을 곳</th><th>목표</th><th>다 읽음</th></tr></thead>
+      <tbody>${plan.segs.map((s, i) => { const d = parseKey(s.date); const cls = [s.date === TODAYK ? 'is-today' : '', s.done ? 'is-done' : '', !s.done && s.date < TODAYK ? 'is-late' : ''].join(' ');
+        return `<tr class="${cls}"><td class="when">${d.getMonth() + 1}/${d.getDate()} (${DOWK[d.getDay()]})${s.date === TODAYK ? ' · 오늘' : ''}</td><td>${range(vols, s.from, s.to)}</td><td class="goal">${at(vols, s.to)}까지</td><td><input type="checkbox" data-i="${i}" ${s.done ? 'checked' : ''} aria-label="${d.getMonth() + 1}월 ${d.getDate()}일 분량 다 읽음"></td></tr>`; }).join('')}</tbody>
+    </table></div>
+    <div class="actions"><button class="btn" id="pl-reset">플랜 새로 짜기</button></div>
+    <p class="small">${planStore.db ? '진행 상황은 내 계정에 나만 볼 수 있게 저장돼요.' : '진행 상황은 이 브라우저에 저장돼요.'}</p>`;
+}
+
+function bindPlan() {
+  const q = s => story.querySelector(s);
+  story.querySelectorAll('.booktab').forEach(b => b.onclick = () => {
+    readDraft(); cur = b.dataset.book; planNote = '';
+    try { localStorage.setItem('plan-book', cur); } catch {}
+    renderPlan();
+  });
+  story.querySelectorAll('.pace').forEach(b => b.onclick = () => { readDraft(); drafts[cur].days = +b.dataset.days; renderPlan(); });
+  story.querySelectorAll('.pl-vol, #pl-from, #pl-fromvol').forEach(el => el.onchange = () => { readDraft(); renderPlan(); });
+  if (q('#pl-make')) q('#pl-make').onclick = async () => {
+    readDraft();
+    const d = drafts[cur], total = sum(d.vols), from = Math.min(total, draftFrom(d));
+    plans[cur] = { book: cur, days: d.days, start: d.start, vols: [...d.vols], total, from, segs: segments(from, total, d.start, d.days), created: Date.now() };
+    planNote = '';
+    await savePlan();
+  };
+  story.querySelectorAll('.sched input').forEach(c => c.onchange = async () => {
+    const i = +c.dataset.i, plan = plans[cur];
+    // 체크하면 그날까지 이전 날짜도 함께 체크, 해제하면 그 뒤도 함께 해제
+    const before = readTo(plan);
+    plan.segs.forEach((s, j) => { if (c.checked && j <= i) s.done = true; if (!c.checked && j >= i) s.done = false; });
+    planNote = '';
+    const after = readTo(plan);
+    if (after > before) cheer(plan, before, after);
+    await savePlan();
+  });
+  if (q('#pl-rebase')) q('#pl-rebase').onclick = async () => {
+    const plan = plans[cur], done = readTo(plan);
+    const kept = plan.segs.filter(s => s.done);
+    const left = Math.max(1, plan.segs.filter(s => s.date >= TODAYK).length || 3);
+    plan.segs = [...kept, ...segments(done + 1, plan.total, TODAYK, left)];
+    planNote = `남은 ${plan.total - done}쪽을 ${left}일로 다시 나눴어요. 하루 약 ${Math.ceil((plan.total - done) / left)}쪽이에요.`;
+    await savePlan();
+  };
+  if (q('#pl-reset')) q('#pl-reset').onclick = async () => {
+    if (q('#pl-reset').dataset.armed) { plans[cur] = null; planNote = ''; await planStore.clear(cur).catch(() => {}); renderPlan(); }
+    else { q('#pl-reset').dataset.armed = '1'; q('#pl-reset').textContent = '지금 기록이 지워져요. 한 번 더 누르면 새로 짭니다'; }
+  };
+}
+// ───────── 축하 ─────────
+const pickOne = a => a[Math.floor(Math.random() * a.length)];
+function cheer(plan, before, after) {
+  const vols = volsOf(plan), total = plan.total, span = total - plan.from + 1;
+  const pctB = (before - plan.from + 1) / span, pctA = (after - plan.from + 1) / span;
+  const left = total - after, read = after - before;
+  if (after >= total) return finishParty(plan);
+  // 권이 끝난 순간 (여러 권짜리)
+  const volB = loc(vols, Math.max(1, before)).v, volEnd = vols.slice(0, volB).reduce((a, b) => a + b, 0);
+  let title, emoji;
+  if (vols.length > 1 && before < volEnd && after >= volEnd) { title = `${volB}권 끝! 이제 ${volB + 1}권으로`; emoji = '📕'; }
+  else if (pctB < .5 && pctA >= .5) { title = '반환점 통과!'; emoji = '🏁'; }
+  else if (pctA < .35) { title = pickOne(['오늘도 고생했어요', '좋은 출발이에요', '한 걸음씩, 잘하고 있어요']); emoji = '🌱'; }
+  else if (pctA < .65) { title = pickOne(['꾸준함이 보여요', '벌써 이만큼 왔어요', '오늘도 해냈어요']); emoji = '📖'; }
+  else if (pctA < .9) { title = pickOne(['얼마 안 남았어요', '조금만 더 힘!', '끝이 보이기 시작해요']); emoji = '💪'; }
+  else { title = pickOne(['결승선이 바로 앞이에요!', '마지막 스퍼트!']); emoji = '🔥'; }
+  toast(emoji, title, `오늘 ${read}쪽 읽었어요 · 남은 ${left}쪽 · ${Math.round(pctA * 100)}%`);
+}
+let toastTimer;
+function toast(emoji, title, sub) {
+  let t = document.getElementById('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite'); document.body.appendChild(t); }
+  t.innerHTML = `<span class="t-emoji" aria-hidden="true">${emoji}</span><span><b>${title}</b><small>${sub}</small></span>`;
+  t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3800);
+}
+function finishParty(plan) {
+  const B = BOOKS[plan.book || cur];
+  const days = plan.segs.filter(s => s.done).length;
+  let o = document.getElementById('party');
+  if (!o) { o = document.createElement('div'); o.id = 'party'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', '완독 축하'); document.body.appendChild(o); }
+  o.innerHTML = `<div class="party-card"><div class="party-emoji" aria-hidden="true">🎉</div><h2>완독!</h2>
+    <p>${B.title} ${plan.total - plan.from + 1}쪽을 ${days}일 만에 다 읽었어요.</p><p class="small">${B.finish}</p>
+    <button class="btn primary" id="party-close">닫기</button></div>`;
+  o.hidden = false;
+  o.querySelector('#party-close').onclick = () => { o.hidden = true; };
+  o.onclick = e => { if (e.target === o) o.hidden = true; };
+  o.querySelector('#party-close').focus();
+  confetti();
+}
+function confetti() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas'); c.className = 'confetti'; document.body.appendChild(c);
+  const ctx = c.getContext('2d'), W = c.width = innerWidth, H = c.height = innerHeight;
+  const colors = ['#1f5f8b', '#b8772f', '#e48aa8', '#6e7f3c', '#f0c64a', '#c8343c'];
+  const ps = Array.from({ length: 160 }, () => ({ x: W / 2 + (Math.random() - .5) * 80, y: H * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, r: Math.random() * 6, w: 6 + Math.random() * 6, h: 8 + Math.random() * 8, c: pickOne(colors), s: Math.random() * .3 - .15 }));
+  const t0 = performance.now();
+  (function frame(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of ps) { p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.s; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); }
+    if (t - t0 < 3200) requestAnimationFrame(frame); else c.remove();
+  })(t0);
+}
+
+function readDraft() {
+  const q = s => story.querySelector(s), d = drafts[cur];
+  if (!q('#pl-start')) return;
+  d.start = q('#pl-start').value || TODAYK;
+  story.querySelectorAll('.pl-vol').forEach(el => { d.vols[+el.dataset.v] = Math.max(10, Math.min(3000, parseInt(el.value) || BOOKS[cur].vols[+el.dataset.v])); });
+  d.fromVol = q('#pl-fromvol') ? +q('#pl-fromvol').value : 1;
+  d.fromPage = Math.max(0, Math.min(d.vols[d.fromVol - 1], parseInt(q('#pl-from').value) || 0));
+}
+async function savePlan() {
+  renderPlan();
+  try { await planStore.set(cur, plans[cur]); } catch { planNote = '저장하지 못했어요. 잠시 뒤 다시 체크해 주세요.'; renderPlan(); }
+}
+function renderPlan() { if (PAGES[i]?.plan) { story.innerHTML = planHTML(); bindPlan(); } }
+async function loadPlan() {
+  if (window.claude?.use) {
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    const uid = user ? await user.id().catch(() => null) : null;
+    if (db && uid) { planStore.db = db; planStore.uid = uid; }
+  }
+  for (const b in BOOKS) { try { plans[b] = await planStore.get(b); } catch { plans[b] = null; } }
+  planLoaded = true;
+  renderPlan();
+}
+
+// ───────── 카라마조프가의 형제들 ─────────
+// 범용 인물: 발끝이 (0,0). o = { coat, pants, dress, shawl, long, skin, hair:[모양, 색], beard, beardLong, must, mood, pose }
+function F(x, y, s = 1, o = {}, cls = '') {
+  const skin = o.skin || '#ecc9a6', coat = o.dress || o.coat || '#555', pants = o.pants || '#2d2f36';
+  const sh = [[-20, -112], [20, -112]], hp = [[-9, -58], [9, -58]];
+  const POSE = {
+    stand: { la: [[-28, -60]], ra: [[28, -60]] },
+    point: { la: [[-28, -60]], ra: [[48, -118], [72, -124]] },
+    wave:  { la: [[-28, -60]], ra: [[42, -140], [46, -170]] },
+    pray:  { la: [[-12, -94], [-2, -104]], ra: [[12, -94], [2, -104]] },
+    up:    { la: [[-42, -140], [-48, -170]], ra: [[42, -140], [48, -170]] },
+    hold:  { la: [[-28, -60]], ra: [[38, -92], [58, -90]] },
+    read:  { la: [[-24, -90], [-8, -92]], ra: [[24, -90], [8, -92]] },
+  };
+  const p = POSE[o.pose || 'stand'];
+  const la = [sh[0], ...p.la], ra = [sh[1], ...p.ra], ll = [hp[0], [-10, 0]], rl = [hp[1], [10, 0]];
+  const shoes = `<ellipse cx="-7" cy="1" rx="9" ry="5" fill="#1c1c1c"/><ellipse cx="13" cy="1" rx="9" ry="5" fill="#1c1c1c"/>`;
+  let body;
+  if (o.dress) body = `<path d="M-18 -122 L18 -122 L44 0 L-44 0 Z" fill="${o.dress}"/>`;
+  else if (o.long) body = `${limbs([ll, rl], pants, 11)}${shoes}<path d="M-21 -126 L21 -126 L30 -8 L-30 -8 Z" fill="${coat}"/>`;
+  else body = `${limbs([ll, rl], pants, 12)}${shoes}<rect x="-21" y="-126" width="42" height="72" rx="12" fill="${coat}"/>`;
+  const [hs, hc] = o.hair || ['short', '#3a2a20'];
+  const HAIR = {
+    short: `<path d="M-20 -148 Q-20 -170 0 -169 Q20 -170 20 -150 Q10 -160 -4 -157 Q-14 -156 -20 -148 Z" fill="${hc}"/>`,
+    bald:  `<path d="M-19 -150 Q-21 -138 -17 -132 M19 -150 Q21 -138 17 -132" stroke="${hc}" stroke-width="6" fill="none" stroke-linecap="round"/>`,
+    slick: `<path d="M-20 -146 Q-21 -168 2 -167 Q20 -166 20 -146 L15 -158 Q0 -161 -10 -155 Z" fill="${hc}"/>`,
+    curly: [[-16, -158], [-6, -165], [6, -165], [16, -158], [-19, -148], [19, -148]].map(([a, b]) => `<circle cx="${a}" cy="${b}" r="8" fill="${hc}"/>`).join(''),
+    bun:   `<circle cx="0" cy="-170" r="10" fill="${hc}"/><path d="M-20 -146 Q-20 -168 0 -167 Q20 -168 20 -146 Q10 -156 0 -156 Q-10 -156 -20 -146 Z" fill="${hc}"/>`,
+    long:  `<path d="M-21 -120 Q-26 -170 0 -168 Q26 -170 21 -120 L14 -122 Q18 -150 0 -156 Q-18 -150 -14 -122 Z" fill="${hc}"/>`,
+    cap:   `<path d="M-20 -152 Q-18 -172 0 -172 Q18 -172 20 -152 Z" fill="${hc}"/><rect x="-4" y="-156" width="30" height="5" rx="2" fill="${hc}"/>`,
+    hood:  `<path d="M-24 -128 Q-28 -174 0 -174 Q28 -174 24 -128 Q12 -136 0 -136 Q-12 -136 -24 -128 Z" fill="${hc}"/>`,
+  };
+  const mood = o.mood || 'calm';
+  const brows = mood === 'angry' ? `<path d="M-13 -155 L-3 -151 M13 -155 L3 -151" stroke="#2a2a2a" stroke-width="2.5" stroke-linecap="round"/>`
+    : mood === 'sad' ? `<path d="M-12 -151 L-3 -154 M12 -151 L3 -154" stroke="#2a2a2a" stroke-width="2" stroke-linecap="round"/>` : '';
+  const mouth = { calm: 'M-5 -134 L5 -134', smile: 'M-6 -135 Q0 -129 6 -135', sad: 'M-6 -131 Q0 -136 6 -131', angry: 'M-6 -132 L6 -132', sly: 'M-6 -134 Q2 -130 8 -137', shock: '' }[mood];
+  const face = `${brows}<circle cx="-7" cy="-147" r="2.2" fill="#1b1b1b"/><circle cx="7" cy="-147" r="2.2" fill="#1b1b1b"/>` +
+    (mood === 'shock' ? `<ellipse cx="0" cy="-133" rx="4" ry="5" fill="#5a2a22"/>` : `<path d="${mouth}" stroke="#7a3b2a" stroke-width="2" fill="none" stroke-linecap="round"/>`);
+  const beard = o.beard ? (o.beardLong
+    ? `<path d="M-18 -142 Q-20 -96 0 -84 Q20 -96 18 -142 Q10 -128 0 -128 Q-10 -128 -18 -142 Z" fill="${o.beard}"/>`
+    : `<path d="M-17 -142 Q-16 -118 0 -116 Q16 -118 17 -142 Q8 -130 0 -131 Q-8 -130 -17 -142 Z" fill="${o.beard}"/>`) : '';
+  const must = o.must ? `<path d="M-13 -139 Q-6 -144 0 -139 Q6 -144 13 -139 Q6 -135 0 -137 Q-6 -135 -13 -139 Z" fill="${o.must}"/>` : '';
+  const book = o.pose === 'read' ? `<rect x="-16" y="-106" width="32" height="22" rx="2" fill="#5a3a6a"/><path d="M0 -106 L0 -84" stroke="#f3ead8" stroke-width="2"/>` : '';
+  return `<g class="${cls}"><g transform="translate(${x} ${y}) scale(${s})">${body}
+    ${o.shawl ? `<path d="M-28 -124 L28 -124 L0 -66 Z" fill="${o.shawl}"/>` : ''}
+    ${limbs([la, ra], coat, 10)}${book}
+    ${[la, ra].map(a => `<circle cx="${end(a)[0]}" cy="${end(a)[1]}" r="5" fill="${skin}"/>`).join('')}
+    <rect x="-6" y="-132" width="12" height="9" fill="${skin}"/>
+    ${hs === 'hood' ? HAIR.hood : ''}
+    <circle cx="0" cy="-146" r="19" fill="${skin}"/>
+    ${hs === 'hood' ? '' : HAIR[hs]}${beard}${must}${face}
+  </g></g>`;
+}
+// 인물 설정
+const K = {
+  fyodor:  { coat: '#7a2e2e', pants: '#3a2a2a', skin: '#e8b090', hair: ['bald', '#9a9a9a'], beard: '#a7a39c' },
+  dmitri:  { coat: '#3f5a3a', pants: '#24262b', hair: ['curly', '#2a1c14'], must: '#2a1c14' },
+  ivan:    { coat: '#34363d', pants: '#1f2126', hair: ['short', '#1f1a16'] },
+  alyosha: { coat: '#1d1d22', long: true, hair: ['short', '#8a6a46'], skin: '#f0d2b4' },
+  smerd:   { coat: '#6e6a5c', pants: '#3a3a36', hair: ['slick', '#151515'], skin: '#e4d0b8' },
+  zosima:  { coat: '#141418', long: true, hair: ['hood', '#141418'], beard: '#f2f2ef', beardLong: true, skin: '#ecd0b4' },
+  grush:   { dress: '#5b2b48', shawl: '#c8343c', hair: ['long', '#2a1810'], skin: '#f2d4bc' },
+  katya:   { dress: '#2d4a7a', hair: ['bun', '#5a3a22'], skin: '#f2d8c4' },
+  boy:     { coat: '#7a6a4a', pants: '#3a3630', hair: ['cap', '#3a3a3a'] },
+  police:  { coat: '#2f3f5f', pants: '#1f2533', hair: ['cap', '#1f2533'], must: '#3a2a20' },
+};
+const k = (who, x, y, s, extra = {}, cls = '') => F(x, y, s, { ...K[who], ...extra }, cls);
+
+const dome = (x, y, s = 1, c = '#c9a43a') => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-26" y="-60" width="52" height="60" fill="#f1ede4"/><rect x="-8" y="-40" width="16" height="26" rx="8" fill="#5a6a7a"/><path d="M-22 -60 Q-30 -84 0 -112 Q30 -84 22 -60 Z" fill="${c}"/><path d="M0 -112 V-132 M-8 -124 H8" stroke="${c}" stroke-width="3"/></g>`;
+const birch = (x, y, h = 160) => `<g transform="translate(${x} ${y})"><rect x="-6" y="${-h}" width="12" height="${h}" fill="#f2f0ea"/>${[0.2, 0.45, 0.7].map(t => `<rect x="-6" y="${-h * t}" width="${6 + (t * 10 % 5)}" height="4" fill="#2a2a2a"/>`).join('')}<circle cx="-18" cy="${-h + 10}" r="26" fill="#7a9a4a"/><circle cx="16" cy="${-h}" r="30" fill="#8aaa52"/><circle cx="0" cy="${-h - 22}" r="24" fill="#6f8f42"/></g>`;
+const fence = (y, c = '#6a5238') => `<g>${Array.from({ length: 17 }, (_, n) => `<rect x="${n * 50}" y="${y - 70}" width="12" height="70" fill="${c}"/>`).join('')}<rect y="${y - 56}" width="800" height="8" fill="${c}"/><rect y="${y - 24}" width="800" height="8" fill="${c}"/></g>`;
+const coins = (x, y) => [[0, 0], [14, -4], [26, 2], [8, 8]].map(([a, b]) => `<ellipse cx="${x + a}" cy="${y + b}" rx="8" ry="4" fill="#e0b84a" stroke="#a8852a"/>`).join('');
+const label = (x, y, t, c = '#1c2a33') => `<text x="${x}" y="${y}" text-anchor="middle" font-family="Jua, sans-serif" font-size="22" fill="${c}">${t}</text>`;
+const dog = (x, y) => `<g transform="translate(${x} ${y})"><ellipse cx="0" cy="-18" rx="22" ry="12" fill="#c9a26a"/><circle cx="22" cy="-30" r="10" fill="#c9a26a"/><path d="M18 -38 L22 -46 L26 -38" fill="#8a6a3a"/><path d="M-14 -8 V0 M10 -8 V0 M-22 -22 L-32 -32" stroke="#8a6a3a" stroke-width="5" stroke-linecap="round"/><circle cx="25" cy="-31" r="1.8" fill="#222"/></g>`;
+const room = (wall = '#d9c6a2', floor = '#8a6a48') => `<rect width="800" height="500" fill="${wall}"/><rect y="400" width="800" height="100" fill="${floor}"/><path d="M0 400 H800" stroke="#6a4e34" stroke-width="4"/>`;
+const tableK = (x, w = 220) => `<rect x="${x}" y="368" width="${w}" height="14" rx="3" fill="#6a4426"/><rect x="${x + 14}" y="382" width="12" height="88" fill="#5a3a20"/><rect x="${x + w - 26}" y="382" width="12" height="88" fill="#5a3a20"/>`;
+const candle = (x, y) => `<g transform="translate(${x} ${y})"><rect x="-5" y="-40" width="10" height="40" fill="#f3ead8"/><path d="M0 -40 Q-6 -52 0 -62 Q6 -52 0 -40 Z" fill="#ffc94a"/><circle cx="0" cy="-50" r="26" fill="#ffd27a" opacity=".18"/></g>`;
+const samovar = (x, y) => `<g transform="translate(${x} ${y})"><path d="M-22 0 L22 0 L16 -10 L-16 -10 Z" fill="#a8752e"/><ellipse cx="0" cy="-38" rx="24" ry="30" fill="#c8923a"/><rect x="-6" y="-80" width="12" height="16" fill="#a8752e"/><path d="M22 -36 H34" stroke="#a8752e" stroke-width="5"/></g>`;
+const cloud = (x, y, w, t) => `<g><ellipse cx="${x}" cy="${y}" rx="${w / 2}" ry="40" fill="#fffdf6" stroke="#1c2a33" stroke-width="2"/><circle cx="${x - w / 2 + 6}" cy="${y + 52}" r="7" fill="#fffdf6" stroke="#1c2a33" stroke-width="2"/><circle cx="${x - w / 2 - 8}" cy="${y + 70}" r="4" fill="#fffdf6" stroke="#1c2a33" stroke-width="2"/><text x="${x}" y="${y + 8}" text-anchor="middle" font-family="Jua, sans-serif" font-size="22" fill="#1c2a33">${t}</text></g>`;
+
+Object.assign(scenes, {
+  k_cover: () => svg(sky('#3b4466', '#e8a77a') + `<path d="M0 330 Q400 300 800 330 V500 H0 Z" fill="#6f7a4a"/>` + dome(140, 330, 1.3) + dome(660, 330, 1.1, '#3f6aa0') + birch(60, 340, 170) + birch(740, 340, 150) +
+    `<rect y="440" width="800" height="60" fill="#5d6a3c"/>` + k('dmitri', 290, 470, 1.25, { pose: 'wave', mood: 'smile' }) + k('ivan', 400, 470, 1.25, { pose: 'read' }) + k('alyosha', 510, 470, 1.25, { mood: 'smile' })),
+
+  k_father: () => svg(room('#c9b48a', '#6e5236') + `<rect x="80" y="80" width="90" height="110" fill="#8a6a3a"/><rect x="88" y="88" width="74" height="94" fill="#d8c8a0"/><circle cx="125" cy="125" r="16" fill="#b8a07a"/>` +
+    `<rect x="560" y="70" width="180" height="150" fill="#3a4a5a"/><path d="M560 70 H740 V220 H560 Z" fill="none" stroke="#5a3a22" stroke-width="10"/><path d="M650 70 V220" stroke="#5a3a22" stroke-width="6"/>` +
+    k('smerd', 620, 470, 1.15, { pose: 'hold', mood: 'sly' }) + `<rect x="672" y="372" width="30" height="6" fill="#bbb"/>` +
+    k('fyodor', 330, 470, 1.35, { pose: 'hold', mood: 'sly' }) + tableK(200, 260) + `<rect x="300" y="330" width="16" height="38" rx="3" fill="#4a7a3a"/><rect x="304" y="320" width="8" height="12" fill="#4a7a3a"/>` + coins(380, 362) +
+    `<rect x="400" y="340" width="40" height="28" rx="4" fill="#e8dcc0"/><text x="420" y="360" text-anchor="middle" font-size="12" fill="#7a2e2e" font-family="Gowun Batang, serif">3000</text>`),
+
+  k_brothers: () => svg(sky('#a9c6d8', '#e6eef0') + `<path d="M0 360 Q400 330 800 360 V500 H0 Z" fill="#8aa05a"/>` + birch(90, 380, 180) + birch(720, 380, 160) + dome(400, 300, .8) +
+    k('dmitri', 210, 450, 1.35, { pose: 'wave', mood: 'smile' }) + k('ivan', 400, 450, 1.35, { pose: 'read' }) + k('alyosha', 590, 450, 1.35, { mood: 'smile', pose: 'pray' }) +
+    label(210, 488, '드미트리', '#1c2a33') + label(400, 488, '이반', '#1c2a33') + label(590, 488, '알료샤', '#1c2a33')),
+
+  k_monastery: () => svg(room('#e8e0cc', '#9a8460') + `<path d="M300 40 Q400 -10 500 40 V200 H300 Z" fill="#d6c8a8"/><path d="M360 200 V90 Q400 60 440 90 V200 Z" fill="#3f6aa0" opacity=".25"/>` + candle(120, 300) + candle(680, 300) +
+    `<g transform="rotate(22 330 470)">` + k('zosima', 330, 470, 1.35, { pose: 'pray' }) + `</g>` + k('dmitri', 520, 470, 1.3, { mood: 'shock' }) + k('fyodor', 650, 470, 1.15, { mood: 'sly' }) + k('alyosha', 170, 470, 1.15, { mood: 'sad', pose: 'pray' })),
+
+  k_quarrel: () => svg(room('#b9a27a', '#5e4630') + `<rect x="60" y="90" width="140" height="150" fill="#2a3644"/><path d="M60 90 H200 V240 H60 Z" fill="none" stroke="#5a3a22" stroke-width="8"/>` +
+    F(130, 236, .55, { ...K.grush }) +
+    k('dmitri', 330, 470, 1.4, { pose: 'wave', mood: 'angry' }) + k('fyodor', 560, 470, 1.35, { pose: 'point', mood: 'angry' }) + coins(420, 470) + coins(470, 478) +
+    bubble(230, 40, 200, '삼천 루블!', 'left') + bubble(480, 70, 220, '그루셴카는 내 거야!', 'right')),
+
+  k_inquisitor: () => svg(room('#4a3a2e', '#2e241c') + `<rect x="580" y="100" width="150" height="120" fill="#2b3550"/><circle cx="650" cy="140" r="14" fill="#f6eecb"/>` +
+    k('ivan', 280, 470, 1.25, { pose: 'point', mood: 'calm' }) + k('alyosha', 520, 470, 1.2, { mood: 'sad', pose: 'pray' }) + tableK(300, 200) + candle(400, 368) + samovar(460, 368) +
+    cloud(220, 90, 260, '신이 없다면…?')),
+
+  k_onion: () => svg(sky('#0f1a35', '#2c3f6a') + stars(60) + `<path d="M0 380 Q400 340 800 380 V500 H0 Z" fill="#2a3a2a"/>` + dome(640, 380, 1, '#c9a43a') + birch(120, 400, 170) +
+    `<g transform="translate(400 440)"><g transform="rotate(-80)">` + F(0, 0, 1, { ...K.alyosha, pose: 'up', mood: 'smile' }) + `</g></g>` +
+    `<path d="M300 470 Q400 455 500 470" stroke="#3a5a3a" stroke-width="6" fill="none"/>`),
+
+  k_night: () => svg(sky('#0c1224', '#1d2a48') + stars(30) + `<circle cx="120" cy="80" r="30" fill="#f6eecb"/>` + `<rect x="470" y="120" width="300" height="300" fill="#3a2e28"/><path d="M450 120 L620 40 L790 120 Z" fill="#2a201c"/><rect x="560" y="200" width="80" height="80" fill="#ffd27a"/><path d="M600 200 V280 M560 240 H640" stroke="#3a2e28" stroke-width="5"/>` +
+    `<rect y="420" width="800" height="80" fill="#1a2418"/>` + fence(440, '#3a2c20') + k('dmitri', 300, 470, 1.25, { mood: 'shock' }) +
+    `<text x="360" y="300" font-family="Jua, sans-serif" font-size="54" fill="#f6eecb">?</text><text x="410" y="260" font-family="Jua, sans-serif" font-size="40" fill="#f6eecb" opacity=".7">?</text>`),
+
+  k_arrest: () => svg(room('#c87a4a', '#5a3a22') + `<path d="M0 0 H800 V60 H0 Z" fill="#a85a32"/>` + [120, 240, 360, 480, 600, 720].map(x => `<circle cx="${x}" cy="40" r="10" fill="#ffd27a"/>`).join('') +
+    k('grush', 200, 470, 1.25, { mood: 'shock' }) + k('dmitri', 360, 470, 1.35, { pose: 'up', mood: 'shock' }) + k('police', 560, 470, 1.25, { pose: 'point', mood: 'angry' }) + k('police', 680, 470, 1.2, { mood: 'angry' }) + tableK(40, 120) +
+    bubble(480, 60, 260, '아버지 살해 혐의로 체포한다', 'left')),
+
+  k_boys: () => svg(room('#d8ccb0', '#7a6248') + `<rect x="500" y="300" width="240" height="70" rx="6" fill="#ece4d4"/><rect x="500" y="360" width="240" height="20" fill="#6a4a30"/><ellipse cx="540" cy="300" rx="34" ry="14" fill="#fff"/>` +
+    `<g transform="translate(652 314) rotate(-90)">` + F(0, 0, .7, { ...K.boy, hair: ['short', '#5a4030'], mood: 'smile' }) + `</g>` +
+    `<path d="M560 330 Q640 310 730 334" stroke="#9ab0c8" stroke-width="34" fill="none" stroke-linecap="round"/>` +
+    k('alyosha', 300, 470, 1.25, { mood: 'smile', pose: 'hold' }) + F(160, 470, .85, { ...K.boy, mood: 'smile', pose: 'wave' }) + F(410, 470, .8, { ...K.boy, coat: '#4a5a7a', mood: 'smile' }) + dog(460, 470)),
+
+  k_confess: () => svg(room('#8a8a70', '#4a4a3a') + `<rect x="80" y="90" width="120" height="120" fill="#5a6a6a"/>` + candle(380, 368) + tableK(280, 200) + `<rect x="420" y="352" width="44" height="16" fill="#e8dcc0"/><rect x="424" y="344" width="44" height="16" fill="#efe4c8"/>` +
+    k('smerd', 560, 470, 1.25, { mood: 'sly', pose: 'point' }) + k('ivan', 200, 470, 1.35, { pose: 'up', mood: 'shock' }) +
+    `<path d="M120 470 Q90 300 160 220 Q230 300 200 470 Z" fill="#000" opacity=".18"/>` + bubble(470, 60, 290, '도련님이 가르쳐 준 대로요', 'left')),
+
+  k_trial: () => svg(room('#cdbf9c', '#7a5a3a') + F(400, 160, .7, { coat: '#1d1d22', hair: ['bald', '#888'], beard: '#ccc', mood: 'calm' }) + `<rect x="250" y="80" width="300" height="110" fill="#6a3a2a"/><rect x="270" y="96" width="260" height="16" fill="#c9a43a"/>` +
+    `<rect x="20" y="300" width="200" height="140" fill="#8a6a48"/>` + [50, 100, 150, 200].map(x => `<circle cx="${x - 10}" cy="290" r="16" fill="#5f666b"/>`).join('') +
+    k('dmitri', 330, 470, 1.25, { mood: 'sad' }) + `<rect x="270" y="390" width="120" height="80" fill="#6a4426"/>` +
+    k('katya', 520, 470, 1.25, { pose: 'wave', mood: 'angry' }) + `<rect x="556" y="282" width="26" height="18" fill="#f6efdf" transform="rotate(-10 569 291)"/>` + k('ivan', 680, 470, 1.15, { mood: 'shock', pose: 'up' })),
+
+  k_stone: () => svg(sky('#9aa6b2', '#dfe4e8') + `<path d="M0 380 Q400 350 800 380 V500 H0 Z" fill="#e9edf0"/>` + Array.from({ length: 30 }, (_, n) => `<circle cx="${(n * 97) % 800}" cy="${(n * 61) % 360}" r="3" fill="#fff" opacity=".8"/>`).join('') +
+    `<path d="M520 470 Q500 380 560 360 Q640 350 660 400 Q680 470 640 470 Z" fill="#8a8a86"/>` + dome(120, 380, .9) +
+    k('alyosha', 330, 470, 1.3, { pose: 'wave', mood: 'smile' }) + F(200, 470, .85, { ...K.boy, pose: 'wave', mood: 'smile' }) + F(440, 470, .8, { ...K.boy, coat: '#4a5a7a', pose: 'wave', mood: 'smile' }) + F(260, 470, .75, { ...K.boy, coat: '#7a4a4a', mood: 'smile' }) +
+    bubble(150, 60, 290, '카라마조프 만세!', 'left')),
+});
+
+const PAGES_K = [
+  { scene: 'k_cover', cover: true,
+    kid: '아버지와 세 아들, 그리고 한 번의 큰 사건. 러시아에서 온 긴 이야기를 그림 열두 장으로 만나 봐요.',
+    adult: '도스토옙스키의 마지막 장편(1880)을 12장면으로 줄였습니다. 인물과 사건의 큰 줄기를 먼저 잡아 두면, 원작의 긴 대화와 철학적 논쟁이 훨씬 덜 막막합니다.' },
+  { scene: 'k_father', chapter: '1장 · 아버지', title: '표도르 카라마조프',
+    kid: '시골 마을에 표도르라는 아버지가 살았어요. 돈과 술을 좋아하고, 아이들은 돌보지 않았어요. 집에는 말수 적은 하인 스메르댜코프가 있었지요.',
+    adult: '표도르는 탐욕스럽고 방탕한 지주입니다. 두 번의 결혼에서 얻은 세 아들을 내버려 두어 남의 손에서 자라게 했습니다. 요리사 스메르댜코프는 그의 사생아라는 소문이 돕니다. 이 아버지를 둘러싼 돈과 애증이 소설 전체의 엔진입니다.' },
+  { scene: 'k_brothers', chapter: '2장 · 세 형제', title: '서로 다른 세 아들',
+    kid: '큰아들 드미트리는 불같이 뜨거워요. 둘째 이반은 책을 좋아하는 똑똑한 사람이에요. 막내 알료샤는 수도원에서 지내는 다정한 청년이에요.',
+    adult: '드미트리는 감정과 육체, 이반은 이성과 회의, 알료샤는 믿음과 사랑을 대표합니다. 세 형제는 한 사람 안에 있는 세 가지 힘처럼 읽히기도 합니다. 성격은 달라도 모두 "카라마조프의 피", 곧 삶에 대한 거센 열정을 물려받았습니다.' },
+  { scene: 'k_monastery', chapter: '3장 · 수도원', title: '조시마 장로의 절',
+    kid: '가족이 수도원의 조시마 장로를 찾아갔어요. 그런데 다툼만 벌어졌어요. 그때 장로가 갑자기 드미트리에게 깊이 절을 했어요. 모두 깜짝 놀랐지요.',
+    adult: '가족의 재산 다툼을 중재하려던 모임은 표도르의 광대짓과 드미트리의 분노로 엉망이 됩니다. 조시마 장로는 드미트리 앞에 무릎을 꿇고 절하는데, 그에게 닥칠 큰 고통을 미리 본 것이었습니다. 장로는 알료샤에게 수도원을 떠나 세상 속에서 살라고 당부합니다.' },
+  { scene: 'k_quarrel', chapter: '4장 · 돈과 사랑', title: '아버지와 아들의 싸움',
+    kid: '드미트리와 아버지는 크게 다퉜어요. 돈 문제, 그리고 둘 다 그루셴카라는 여인을 좋아했기 때문이에요. 드미트리는 화가 나서 무서운 말까지 내뱉었어요.',
+    adult: '드미트리는 어머니 몫의 유산을 아버지가 가로챘다고 믿고, 약혼녀 카테리나에게 갚아야 할 3천 루블에 쫓깁니다. 아버지 역시 그루셴카를 유혹하려고 3천 루블이 든 봉투를 준비해 둡니다. 드미트리가 여러 사람 앞에서 아버지를 죽이겠다고 외친 말은 나중에 그를 옭아맵니다.' },
+  { scene: 'k_inquisitor', chapter: '5장 · 이반의 질문', title: '신이 없다면?',
+    kid: '이반은 알료샤에게 어려운 질문을 했어요. "왜 세상에는 죄 없는 아이들이 아파야 할까?" 알료샤는 대답 대신 형을 꼭 안아 주었어요.',
+    adult: '술집에서 이반은 죄 없는 아이들의 고통을 들어 신이 만든 세계를 받아들일 수 없다고 말하고, 자신이 지은 서사시 「대심문관」을 들려줍니다. 사람들은 자유보다 빵과 기적을 원한다는 대심문관의 논리는 소설에서 가장 유명한 대목입니다. 알료샤는 말없이 형에게 입을 맞춥니다.',
+    note: '"신이 없다면 모든 것이 허용된다"는 이반의 생각은 이후 사건에서 무서운 방식으로 되돌아옵니다.' },
+  { scene: 'k_onion', chapter: '6장 · 별이 뜬 밤', title: '땅에 입 맞춘 알료샤',
+    kid: '알료샤가 존경하던 조시마 장로가 세상을 떠났어요. 알료샤는 마음이 무너졌어요. 하지만 어느 밤, 별 아래 땅에 엎드려 입을 맞추고 다시 일어날 힘을 얻었어요.',
+    adult: '장로의 시신에서 기적 대신 썩는 냄새가 나자 사람들은 수군거리고, 알료샤의 믿음도 흔들립니다. 그는 그루셴카를 찾아가지만, 그녀에게서 "양파 한 뿌리" 우화와 진심을 듣고 서로를 위로합니다. 그날 밤 알료샤는 별빛 아래 땅을 끌어안고 울며 평생 지킬 믿음을 얻습니다.' },
+  { scene: 'k_night', chapter: '7장 · 그날 밤', title: '사건이 일어났다',
+    kid: '어두운 밤, 드미트리는 아버지 집 정원에 몰래 들어갔어요. 그리고 그날 밤, 아버지가 누군가에게 목숨을 잃는 큰 사건이 일어났어요.',
+    adult: '그루셴카가 아버지 집에 갔다고 의심한 드미트리는 놋쇠 공이를 들고 담을 넘습니다. 하인 그리고리를 내리쳐 쓰러뜨리고 도망치는데, 그날 밤 표도르가 살해되고 3천 루블 봉투는 빈 채로 발견됩니다. 피 묻은 손, 갑자기 생긴 돈, 아버지를 죽이겠다던 말. 모든 증거가 드미트리를 가리킵니다.' },
+  { scene: 'k_arrest', chapter: '8장 · 체포', title: '잔치 한가운데서',
+    kid: '드미트리는 그루셴카를 만나러 가서 신나게 잔치를 열었어요. 그런데 경찰이 들이닥쳤어요. "아버지를 해친 범인으로 체포한다!" 드미트리는 "나는 아니야!"라고 외쳤어요.',
+    adult: '모크로예 마을의 밤샘 잔치에서 드미트리와 그루셴카는 비로소 서로의 사랑을 확인합니다. 바로 그때 경찰이 도착합니다. 드미트리는 아버지를 죽이지 않았다고 맹세하지만, 돈의 출처를 끝내 밝히지 못합니다. 그 돈은 약혼녀의 3천 루블 중 남겨 둔 절반이었고, 그는 그것을 수치로 여겼기 때문입니다.' },
+  { scene: 'k_boys', chapter: '9장 · 소년들', title: '알료샤와 아이들',
+    kid: '알료샤는 마을 소년들과 친구가 되었어요. 그중 일류샤라는 아이가 많이 아팠어요. 친구들은 강아지를 데리고 매일 일류샤를 찾아갔어요.',
+    adult: '형제들의 비극과 나란히, 알료샤는 가난한 퇴역 대위의 아들 일류샤와 소년들 사이의 상처를 하나씩 풀어 줍니다. 드미트리가 일류샤의 아버지를 모욕했던 일이 아이의 마음에 깊은 상처로 남아 있었습니다. 이 소년들의 이야기는 소설의 마지막 희망으로 이어집니다.' },
+  { scene: 'k_confess', chapter: '10장 · 고백', title: '진짜 범인',
+    kid: '이반은 하인 스메르댜코프를 찾아갔어요. 스메르댜코프는 무서운 비밀을 털어놓았어요. "도련님이 가르쳐 준 대로 했을 뿐이에요." 그리고 얼마 뒤 세상을 떠났어요.',
+    adult: '스메르댜코프는 자신이 표도르를 죽이고 돈을 가져갔다고 고백하며, "모든 것이 허용된다"는 이반의 사상이 자신을 움직였다고 말합니다. 이반은 직접 손을 대지 않았지만 죄에서 자유롭지 못하다는 사실에 무너집니다. 재판 전날 스메르댜코프는 스스로 목숨을 끊고, 이반은 환영과 열병에 시달립니다.' },
+  { scene: 'k_trial', chapter: '11장 · 재판', title: '뒤집힌 증언',
+    kid: '재판이 열렸어요. 이반은 진실을 말하려 했지만 너무 아파서 사람들이 믿지 않았어요. 결국 드미트리는 죄인이 되어 먼 곳으로 보내지게 되었어요.',
+    adult: '이반은 법정에서 스메르댜코프가 범인이라며 돈을 내놓지만, 정신이 무너진 상태라 신뢰를 얻지 못합니다. 이반을 지키려던 카테리나는 드미트리가 아버지를 죽이겠다고 쓴 편지를 증거로 내밀고, 배심원은 유죄를 선고합니다. 드미트리는 시베리아 유형을 받아들이며 고통을 통해 새사람이 되겠다고 다짐합니다.' },
+  { scene: 'k_stone', chapter: '12장 · 큰 돌 앞에서', title: '서로를 기억하자',
+    kid: '일류샤가 하늘나라로 떠났어요. 알료샤와 소년들은 큰 돌 앞에 모였어요. "오늘을 꼭 기억하자. 서로를 사랑하자!" 아이들이 외쳤어요. "카라마조프 만세!"',
+    adult: '일류샤의 장례식 날, 알료샤는 아이가 묻히고 싶어 했던 큰 돌 곁에서 소년들에게 말합니다. 앞으로 어떤 사람이 되든 오늘 함께 느낀 선한 마음을 잊지 말자고. 아버지 살해라는 어둠으로 시작한 소설은 아이들의 환호로 끝납니다. 도스토옙스키가 남긴 마지막 대답은 기억과 사랑이었습니다.' },
+  { end: true },
+  { plan: true },
+];
+
+const ENDING_K = `
+  <div class="chapter">책을 덮기 전에</div>
+  <h2>이제 진짜 책을 펼쳐 볼까요?</h2>
+  <div class="cast">
+    <div class="who"><svg viewBox="-60 -200 120 120" aria-hidden="true">${k('dmitri', 0, 0, 1, { mood: 'smile' })}</svg><div><b>드미트리</b><span>뜨거운 맏아들. 아버지 살해 혐의를 받는다</span></div></div>
+    <div class="who"><svg viewBox="-60 -200 120 120" aria-hidden="true">${k('ivan', 0, 0, 1)}</svg><div><b>이반</b><span>"신이 없다면?"을 묻는 냉철한 둘째</span></div></div>
+    <div class="who"><svg viewBox="-60 -200 120 120" aria-hidden="true">${k('alyosha', 0, 0, 1, { mood: 'smile' })}</svg><div><b>알료샤</b><span>모두를 품는 막내. 이 소설의 주인공</span></div></div>
+    <div class="who"><svg viewBox="-60 -200 120 120" aria-hidden="true">${k('fyodor', 0, 0, 1, { mood: 'sly' })}</svg><div><b>표도르</b><span>탐욕스러운 아버지</span></div></div>
+    <div class="who"><svg viewBox="-60 -200 120 120" aria-hidden="true">${k('smerd', 0, 0, 1, { mood: 'sly' })}</svg><div><b>스메르댜코프</b><span>말없는 하인. 숨은 사생아라는 소문</span></div></div>
+    <div class="who"><svg viewBox="-60 -200 120 120" aria-hidden="true">${k('grush', 0, 0, 1)}</svg><div><b>그루셴카</b><span>아버지와 아들이 함께 사랑한 여인</span></div></div>
+  </div>
+  <h3>함께 이야기해 봐요</h3>
+  <ol class="qs kidq">
+    <li>세 형제 중 누구와 가장 친구가 되고 싶나요? 왜요?</li>
+    <li>직접 하지 않았는데도 나쁜 일에 책임이 있을 수 있을까요?</li>
+    <li>알료샤와 소년들처럼 꼭 기억하고 싶은 날이 있나요?</li>
+  </ol>
+  <ol class="qs adultq">
+    <li>표도르를 실제로 죽인 사람과, 그 죽음에 책임 있는 사람은 같은가.</li>
+    <li>대심문관의 말처럼 사람들은 자유보다 빵과 안정을 원할까.</li>
+    <li>드미트리는 짓지 않은 죄의 벌을 왜 받아들였을까.</li>
+  </ol>
+  <h3>원작은 이렇게 읽어 보세요</h3>
+  <div class="next-read">
+    처음 몇 편은 인물 소개와 가족사가 길어 지치기 쉽습니다. 위의 인물 카드를 옆에 두고, 이름이 애칭으로 바뀌어도(알렉세이 = 알료샤, 드미트리 = 미챠) 같은 사람이라는 것만 기억하면 훨씬 수월합니다.
+    철학적인 핵심이 궁금하면 제5편 「프로와 콘트라」의 「반역」과 「대심문관」 장을 먼저 읽어 봐도 좋습니다.<br><br>
+    도스토옙스키(1821–1881)는 이 작품을 끝내고 몇 달 뒤 세상을 떠났습니다. 서문에서 예고한 알료샤의 다음 이야기는 끝내 쓰이지 못했습니다.
+  </div>
+  <div class="actions"><button class="btn primary" id="to-plan">완독 플랜 짜기 →</button></div>`;
+
+// ───────── 넘기기 ─────────
+const stage = document.getElementById('stage'), story = document.getElementById('story');
+const dots = document.getElementById('dots'), count = document.getElementById('count');
+const prevB = document.getElementById('prev'), nextB = document.getElementById('next');
+const LIB = {
+  zorba:     { title: '그리스인 조르바', author: '니코스 카잔차키스', pages: PAGES_Z, ending: ENDING_Z, h: 'p' },
+  karamazov: { title: '카라마조프가의 형제들', author: '표도르 도스토옙스키', pages: PAGES_K, ending: ENDING_K, h: 'k' },
+};
+let book = 'zorba', PAGES = PAGES_Z;
+let i = 0;
+
+function buildDots() {
+  dots.innerHTML = '';
+  PAGES.forEach((_, n) => { const b = document.createElement('button'); b.setAttribute('aria-label', `${n + 1}쪽으로`); b.onclick = () => go(n); dots.appendChild(b); });
+}
+function setBook(b) {
+  book = b; PAGES = LIB[b].pages;
+  document.querySelectorAll('#lib button').forEach(x => x.setAttribute('aria-pressed', x.dataset.lib === b));
+  buildDots();
+}
+document.querySelectorAll('#lib button').forEach(x => x.onclick = () => { if (x.dataset.lib !== book) { setBook(x.dataset.lib); go(0); } });
+
+function render() {
+  const p = PAGES[i];
+  if (p.end) {
+    stage.hidden = true;
+    story.innerHTML = LIB[book].ending;
+    story.querySelector('#to-plan').onclick = () => { cur = book; try { localStorage.setItem('plan-book', cur); } catch {} go(PAGES.length - 1); };
+  } else if (p.plan) {
+    cur = book;
+    stage.hidden = true;
+    story.innerHTML = planHTML();
+    bindPlan();
+  } else {
+    stage.hidden = false;
+    uid = 0;
+    stage.innerHTML = scenes[p.scene]();
+    stage.setAttribute('aria-label', p.title || '표지');
+    story.innerHTML = p.cover
+      ? `<div class="chapter">${LIB[book].author} 원작 · 그림책으로 다시 읽기</div><h1>${LIB[book].title}</h1><p class="kid">${p.kid}</p><p class="adult">${p.adult}</p>`
+      : `<div class="chapter">${p.chapter}</div><h2>${p.title}</h2><p class="kid">${p.kid}</p><p class="adult">${p.adult}</p>${p.note ? `<p class="note">${p.note}</p>` : ''}`;
+  }
+  [...dots.children].forEach((d, n) => d.setAttribute('aria-current', n === i ? 'true' : 'false'));
+  prevB.disabled = i === 0;
+  nextB.disabled = i === PAGES.length - 1;
+  nextB.textContent = i === 0 ? '펼치기 →' : '다음장 →';
+  count.textContent = `${i + 1} / ${PAGES.length}`;
+}
+function go(n, push = true) {
+  i = Math.max(0, Math.min(PAGES.length - 1, n));
+  render();
+  if (push) history.replaceState(null, '', i || book !== 'zorba' ? '#' + LIB[book].h + i : location.pathname);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+prevB.onclick = () => go(i - 1);
+nextB.onclick = () => go(i + 1);
+document.addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); });
+let tx = null;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 60) go(i + (dx < 0 ? 1 : -1)); tx = null; });
+function fromHash() {
+  const m = /^#([pk])(\d+)$/.exec(location.hash);
+  const b = m && m[1] === 'k' ? 'karamazov' : 'zorba';
+  if (b !== book || !dots.children.length) setBook(b);
+  go(m ? +m[2] : 0, false);
+}
+window.addEventListener('hashchange', fromHash);
+
+// 읽기 모드
+function setMode(m) {
+  document.body.dataset.mode = m;
+  document.getElementById('m-kid').setAttribute('aria-pressed', m === 'kid');
+  document.getElementById('m-adult').setAttribute('aria-pressed', m === 'adult');
+  try { localStorage.setItem('zorba-mode', m); } catch {}
+}
+document.getElementById('m-kid').onclick = () => setMode('kid');
+document.getElementById('m-adult').onclick = () => setMode('adult');
+let saved = 'kid'; try { saved = localStorage.getItem('zorba-mode') || 'kid'; } catch {}
+setMode(saved);
+fromHash();
+loadPlan();
+</script>
