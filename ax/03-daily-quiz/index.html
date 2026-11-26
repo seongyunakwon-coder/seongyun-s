@@ -91,6 +91,15 @@ p { margin: 0; }
 .learn h3, .steps h3, .deep h3 { margin: 0; font: 600 14px var(--f-body); letter-spacing: .04em; color: var(--muted); }
 .steps ol { margin: 6px 0 0; padding-left: 1.4em; display: grid; gap: 4px; }
 .steps li[hidden] { display: none; }
+.steps .row { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.trap, .rule { border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.trap { background: color-mix(in srgb, var(--bad) 9%, var(--paper)); border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--paper)); }
+.rule { background: color-mix(in srgb, var(--good) 9%, var(--paper)); border: 1px solid color-mix(in srgb, var(--good) 30%, var(--paper)); }
+.trap h3, .rule h3 { margin: 0; font: 600 14px var(--f-body); letter-spacing: .04em; }
+.trap h3 { color: var(--bad); } .rule h3 { color: var(--good); }
+.tutor { display: grid; gap: 10px; }
+.tutor-text { white-space: pre-wrap; background: var(--soft); border-radius: 10px; padding: 14px 16px; line-height: 1.75; }
+.tutor-text:empty { display: none; }
 
 /* 결과 */
 .score { display: flex; flex-wrap: wrap; gap: 20px; align-items: baseline; }
@@ -297,25 +306,35 @@ const BANK = {
 
   intuit: { items: [
     { type: 'mc', topic: '생일 문제', q: '한 방에 몇 명 이상 있으면 생일이 같은 두 사람이 있을 확률이 50%를 넘을까?', choices: ['23명', '57명', '183명', '366명'], answer: 0,
-      explain: '23명이면 약 50.7%입니다. 사람 수가 아니라 짝의 수(23명이면 253쌍)가 빠르게 늘어나기 때문입니다.',
-      learn: '직관이 틀리는 이유는 "나와 생일이 같은 사람"을 떠올리기 때문입니다. 실제 질문은 "누구든 두 사람"입니다. 이 원리는 해시 충돌 공격(생일 공격)처럼 암호학에서도 중요하게 쓰입니다.',
-      steps: ['모두 생일이 다를 확률을 먼저 구한다.', '두 번째 사람이 다를 확률 364/365, 세 번째 363/365… 를 곱한다.', '23명까지 곱하면 약 0.493이 된다.', '따라서 같은 생일이 있을 확률은 1 − 0.493 ≈ 0.507.'] },
+      explain: '23명이면 약 50.7%로 처음 50%를 넘습니다. 핵심은 사람 수가 아니라 "짝"의 수입니다. 23명이면 두 사람씩 짝지을 수 있는 경우가 23×22÷2 = 253쌍이나 되고, 그중 한 쌍만 생일이 같아도 됩니다. 183명은 1년의 절반이라 그럴듯해 보이지만 "나와 생일이 같은 사람"을 찾는 질문과 헷갈린 답이고, 366명은 비둘기집 원리로 100%가 되는 인원입니다.',
+      learn: '사람 수가 조금만 늘어도 확률은 빠르게 올라 50명이면 약 97%, 70명이면 99.9%입니다. 이 원리는 암호학의 "생일 공격"으로 이어집니다. 해시 값이 N가지라면 서로 같은 값이 나오는 충돌을 찾는 데 N번이 아니라 대략 √N번만 시도하면 된다는 뜻이라, 보안 설계에서 해시 길이를 정하는 기준이 됩니다.',
+      steps: ['"적어도 한 쌍이 같다"는 계산이 복잡하니, 반대로 "모두 다르다"의 확률을 구한다.', '첫 사람은 아무 날이나 된다. 두 번째 사람이 첫 사람과 다를 확률은 364/365.', '세 번째 사람은 앞의 두 사람과 달라야 하므로 363/365, 네 번째는 362/365… 이렇게 곱해 나간다.', '23번째 사람까지 곱하면 (364/365)×(363/365)×…×(343/365) ≈ 0.493.', '따라서 같은 생일이 있을 확률 = 1 − 0.493 ≈ 0.507, 즉 약 51%.', '빠른 어림: 짝이 253쌍, 한 쌍이 같을 확률은 1/365. 253/365 ≈ 0.7쌍 정도는 같을 거라 기대되니 50%를 넘는다는 감이 온다.'],
+      trap: '대부분 "나와 생일이 같은 사람"을 떠올려 365의 절반쯤을 답합니다. 문제는 "아무나 두 사람"인데, 우리는 짝의 수가 사람 수보다 훨씬 빨리(제곱에 가깝게) 늘어난다는 걸 직관적으로 잘 느끼지 못합니다.',
+      rule: '경우의 수가 N가지일 때 겹칠 확률이 50%가 되는 인원은 대략 1.2×√N. 365일이면 1.2×19 ≈ 23명.' },
     { type: 'estimate', topic: '지구의 크기', q: '지구 둘레(적도)는 대략 몇 km일까?', value: 40075, unit: 'km',
-      explain: '약 4만 km입니다. 원래 미터는 북극에서 적도까지 거리의 1천만분의 1로 정의되어, 지구 둘레가 거의 정확히 4만 km가 되었습니다.',
-      learn: '기원전 3세기 에라토스테네스는 두 도시에서 같은 날 정오의 그림자 각도 차이(약 7.2°, 원의 1/50)와 두 도시 사이 거리를 이용해 지구 둘레를 놀랍도록 정확히 계산했습니다. 페르미 추정의 원조라 할 만합니다.',
-      steps: ['서울-뉴욕 비행은 약 14시간, 대략 지구 1/4~1/3 바퀴다.', '비행기 속도는 시속 약 900km, 14시간이면 약 1만 2천 km.', '이를 약 1/3 바퀴로 보면 둘레는 3만 6천~4만 km.', '정답 약 40,075km와 같은 자릿수다.'] },
+      explain: '정답은 약 40,075km, 어림으로 4만 km입니다. 이 숫자가 이렇게 깔끔한 데는 이유가 있습니다. 1790년대 프랑스에서 미터를 처음 정할 때, 북극에서 적도까지 거리의 1천만분의 1을 1m로 삼았습니다. 그래서 북극→적도가 1만 km, 지구 한 바퀴가 그 4배인 약 4만 km가 된 것입니다. 정답의 1/3배~3배 안이면 맞은 것으로 치므로, 1만 3천~12만 km 사이를 말했다면 자릿수 감각은 충분합니다.',
+      learn: '기원전 3세기 에라토스테네스는 이집트의 두 도시에서 같은 날 정오에 그림자 각도가 약 7.2도(원의 1/50) 다르다는 것을 알아냈습니다. 두 도시 사이 거리에 50을 곱해 지구 둘레를 구했는데, 오늘날 값과 놀랍도록 가까웠습니다. 막대기와 그림자, 곱셈만으로 지구를 잰 셈이라 페르미 추정의 원조로 꼽힙니다.',
+      steps: ['내가 아는 거리 하나와, 그것이 지구의 몇 분의 1인지를 짝지으면 된다.', '한반도는 남쪽 끝(제주 부근, 북위 약 33도)부터 북쪽 끝(약 43도)까지 위도로 약 10도다.', '이 남북 거리는 대략 1,000~1,100km 정도로 알려져 있다.', '위도 10도가 약 1,100km라면 1도는 약 110km.', '지구 한 바퀴는 360도이므로 110km × 360 ≈ 39,600km.', '정답 40,075km와 거의 같다. 에라토스테네스가 쓴 방법도 이것과 같은 원리다.'],
+      trap: '지구는 너무 커서 감이 안 오니 1만 km나 100만 km처럼 자릿수가 크게 틀리기 쉽습니다. 큰 수를 한 번에 떠올리지 말고, 아는 거리(한반도, 비행시간)를 몇 배 하면 되는지로 쪼개야 합니다.',
+      rule: '지구 둘레 4만 km, 위도 1도 ≈ 111km, 북극→적도 1만 km. 이 세 숫자를 외워 두면 지리 관련 추정이 빨라진다.' },
     { type: 'mc', topic: '몬티 홀 문제', q: '문 3개 중 하나 뒤에 자동차가 있다. 하나를 고르자, 답을 아는 사회자가 나머지 중 염소가 있는 문을 열었다. 선택을 바꾸면 자동차를 받을 확률은?', choices: ['1/3', '1/2', '2/3', '바꾸든 말든 같다'], answer: 2,
-      explain: '처음 고른 문이 맞을 확률은 1/3이고, 사회자는 이 확률을 바꾸지 않습니다. 나머지 2/3는 열리지 않은 다른 문 하나로 모입니다.',
-      learn: '핵심은 사회자가 답을 알고 일부러 염소 문을 연다는 정보입니다. 사회자가 무작위로 열었는데 우연히 염소였다면 확률은 1/2이 됩니다. 조건부 확률에서 "정보가 어떻게 만들어졌는가"가 결과를 바꾼다는 좋은 예입니다.',
-      steps: ['처음 고른 문이 맞을 확률은 1/3, 틀릴 확률은 2/3.', '처음에 틀렸다면 사회자가 남은 염소를 열어 주므로 바꾸면 무조건 자동차.', '따라서 바꿔서 이길 확률 = 처음에 틀렸을 확률 = 2/3.'] },
+      explain: '바꾸면 2/3, 그대로 있으면 1/3입니다. 처음 고를 때 내 문이 맞을 확률은 1/3이고, 사회자가 문을 연 뒤에도 이 값은 변하지 않습니다. 사회자는 답을 알고 언제나 염소 문만 열기 때문에, 내 선택이 맞았는지에 대한 새 정보를 주지 않기 때문입니다. 나머지 2/3의 확률은 열리지 않고 남은 문 하나로 고스란히 모입니다. "문이 두 개 남았으니 반반"이라는 답(1/2)이 가장 흔한 오답입니다.',
+      learn: '1990년 칼럼니스트 메릴린 보스 사반트가 "바꾸는 게 유리하다"고 답하자 수학자를 포함해 수천 통의 반박 편지가 왔고, 나중에 컴퓨터 시뮬레이션으로 그녀가 옳다는 것이 확인됐습니다. 핵심은 정보가 어떻게 만들어졌는가입니다. 사회자가 답을 모른 채 아무 문이나 열었는데 우연히 염소였다면 그때는 정말 1/2이 됩니다. 같은 결과라도 그 결과를 만든 과정이 확률을 바꾼다는 것이 조건부 확률의 핵심입니다.',
+      steps: ['처음 고른 문이 자동차일 확률은 1/3, 염소일 확률은 2/3.', '경우 1 (확률 1/3): 처음에 자동차를 골랐다. 바꾸면 염소를 받는다.', '경우 2 (확률 2/3): 처음에 염소를 골랐다. 사회자는 남은 염소 문을 열 수밖에 없고, 남은 문은 반드시 자동차다. 바꾸면 자동차를 받는다.', '따라서 "바꿔서 이길 확률" = "처음에 틀렸을 확률" = 2/3.', '직관 점검: 문이 100개라고 해 보자. 내가 1개를 고르고, 사회자가 염소 문 98개를 열어 1개만 남긴다. 처음 고른 문(1/100)과 사회자가 남긴 문 중 어느 쪽에 걸겠는가?'],
+      trap: '눈앞에 문이 두 개 남으면 뇌는 자동으로 "반반"이라고 판단합니다. 남은 선택지의 개수만 보고, 사회자가 일부러 골라서 열었다는 과정 정보를 무시하기 때문입니다.',
+      rule: '확률 문제에서 누군가 정보를 줄 때는 "그 사람이 무엇을 알고, 어떤 규칙으로 행동했는가"를 먼저 따진다. 헷갈리면 숫자를 100배로 키워 본다.' },
     { type: 'mc', topic: '기하급수', q: '두께 0.1mm 종이를 42번 접을 수 있다면 두께는 대략 어디까지 닿을까?', choices: ['63빌딩 높이', '에베레스트산 높이', '서울에서 부산까지', '지구에서 달까지'], answer: 3,
-      explain: '0.1mm × 2⁴² ≈ 0.1mm × 4.4조 ≈ 44만 km. 지구-달 평균 거리(약 38만 km)보다 깁니다.',
-      learn: '사람의 직관은 선형 증가에 익숙해 기하급수를 크게 과소평가합니다. 복리, 전염병 확산, 반도체 집적도(무어의 법칙)를 이해할 때 이 감각이 중요합니다. 2¹⁰ ≈ 1,000이라는 어림을 기억하면 빠르게 계산할 수 있습니다.',
-      steps: ['2¹⁰ ≈ 1,000이므로 2⁴⁰ ≈ 1조, 2⁴² ≈ 4조.', '0.1mm × 4조 = 4천억 mm = 4억 m = 40만 km.', '달까지는 약 38만 km이므로 달에 닿는다.'] },
+      explain: '달까지 닿습니다. 한 번 접을 때마다 두께가 2배가 되니 42번이면 2⁴²배, 약 4.4조 배입니다. 0.1mm × 4.4조 ≈ 44만 km로, 지구에서 달까지의 평균 거리(약 38만 km)보다 깁니다. 63빌딩(약 250m)은 접는 횟수로 약 21번, 에베레스트(약 8.8km)는 약 27번, 서울–부산(약 325km)은 약 32번이면 이미 지나갑니다.',
+      learn: '사람의 직관은 하나씩 더해지는 선형 증가에 익숙해서, 계속 곱해지는 기하급수를 크게 과소평가합니다. 복리 이자, 전염병 초기 확산, 반도체 집적도가 2년마다 2배가 된다는 무어의 법칙이 모두 같은 원리입니다. 실제 종이는 두께와 길이 문제로 7~8번 이상 접기 어렵고, 기록은 12번 정도입니다. 그래서 이 문제는 계산 감각을 위한 사고 실험입니다.',
+      steps: ['접을 때마다 2배이므로 42번이면 2⁴²배.', '외워 둘 숫자: 2¹⁰ = 1,024 ≈ 1천.', '2⁴⁰ = (2¹⁰)⁴ ≈ 1천⁴ = 1조. 여기에 2² = 4를 곱하면 2⁴² ≈ 4조.', '두께 = 0.1mm × 4조 = 4천억 mm.', '단위 바꾸기: 4천억 mm = 4억 m = 40만 km.', '달까지는 약 38만 km. 따라서 달에 닿고도 조금 남는다.'],
+      trap: '"종이를 몇십 번 접어 봐야 두꺼운 책 정도"라고 느끼는 건, 증가를 덧셈처럼 상상하기 때문입니다. 처음 10번은 겨우 10cm 정도라 느리게 보이지만, 마지막 몇 번에 수십만 km가 한꺼번에 늘어납니다.',
+      rule: '2¹⁰ ≈ 1천, 2²⁰ ≈ 1백만, 2³⁰ ≈ 10억, 2⁴⁰ ≈ 1조. 그리고 "72의 법칙": 연 r% 성장이면 72÷r 년마다 2배가 된다.' },
     { type: 'mc', topic: '기저율', q: '유병률 1%인 병을 99% 정확한 검사(환자는 99% 양성, 건강한 사람은 99% 음성)로 검사했더니 양성이 나왔다. 실제로 병이 있을 확률은?', choices: ['약 99%', '약 90%', '약 50%', '약 1%'], answer: 2,
-      explain: '1만 명 중 환자 100명에서 양성 99명, 건강한 9,900명에서 거짓 양성 99명. 양성 198명 중 진짜 환자는 99명으로 50%입니다.',
-      learn: '검사 정확도만 보고 기저율(원래 얼마나 흔한가)을 무시하는 것을 기저율 오류라고 합니다. 베이즈 정리가 이를 바로잡는 도구이며, 의료 검진, 보안 시스템의 경보, 법정 증거 해석에서 자주 문제가 됩니다.',
-      steps: ['1만 명으로 놓고 자연수로 계산한다.', '환자 100명 → 양성 99명.', '건강한 9,900명 → 1%가 거짓 양성, 99명.', '양성 198명 중 진짜 환자 99명 → 50%.'] },
+      explain: '약 50%입니다. 1만 명을 검사한다고 생각하면 환자는 100명(1%)이고, 그중 99명이 양성으로 나옵니다. 건강한 사람은 9,900명인데 검사가 1% 틀리니 99명이 거짓 양성입니다. 양성 판정을 받은 198명 중 진짜 환자는 99명, 딱 절반입니다. "검사가 99% 정확하니 99%"라는 답이 가장 흔한 오답입니다.',
+      learn: '원래 얼마나 흔한가(기저율)를 무시하고 검사 정확도만 보는 실수를 기저율 오류라고 합니다. 병이 더 드물어 유병률이 0.1%라면, 같은 검사에서 양성이 나와도 실제 환자일 확률은 약 9%로 뚝 떨어집니다. 그래서 의료 현장에서는 드문 병일수록 첫 검사가 양성이면 다른 검사로 한 번 더 확인합니다. 이 계산을 공식으로 쓴 것이 베이즈 정리이고, 스팸 필터, 보안 경보, 법정 증거 해석에도 같은 문제가 나타납니다.',
+      steps: ['퍼센트끼리 곱하면 헷갈리니, 1만 명이라는 구체적인 사람 수로 바꾼다.', '환자: 1만 명 × 1% = 100명. 이 중 99%가 양성 → 99명.', '건강한 사람: 9,900명. 이 중 1%가 거짓 양성 → 99명.', '양성 판정을 받은 사람은 모두 99 + 99 = 198명.', '그중 진짜 환자는 99명 → 99 ÷ 198 = 50%.', '공식으로 확인: (0.01×0.99) ÷ (0.01×0.99 + 0.99×0.01) = 0.5.'],
+      trap: '"99% 정확"이라는 숫자가 머릿속을 차지해서, 애초에 환자가 100명 중 1명뿐이라는 사실을 잊습니다. 건강한 사람이 압도적으로 많으면, 아무리 작은 오류율이라도 거짓 양성의 수가 진짜 양성만큼 커질 수 있습니다.',
+      rule: '확률 문제는 1만 명 같은 구체적인 사람 수로 바꿔 표를 그린다. "양성 중 진짜 비율 = 진짜 양성 ÷ (진짜 양성 + 거짓 양성)".' },
   ], deep: { q: '기저율 오류가 일상이나 뉴스에서 나타날 수 있는 사례를 하나 들고, 어떻게 판단해야 하는지 설명해 보세요.', answer: '예를 들어 공항 보안 시스템이 99% 정확하게 위험인물을 잡아낸다고 해도, 실제 위험인물이 극히 드물면 경보의 대부분은 무고한 사람입니다. 판단할 때는 정확도뿐 아니라 원래 얼마나 흔한지를 함께 보고, 1만 명 같은 구체적인 숫자로 바꿔 계산해 보면 오류를 피할 수 있습니다.' } },
 
   logic: { items: [
@@ -407,20 +426,25 @@ function buildPrompt(cat) {
 - type은 "mc"(4지선다)${c.timed ? ' 또는 "estimate"(숫자 하나로 답하는 추정 문제. 정답이 널리 알려진 값일 때만. 1~2문항)' : '만 쓴다'}.
 - mc: choices 4개, answer는 정답 인덱스(0~3). 정답 위치를 골고루 섞는다. 오답도 그럴듯하게.
 - estimate: value(숫자), unit(단위).
-- explain: 왜 정답인지 2~3문장. learn: 이 개념을 넓히는 미니 강의 3~5문장(관련 개념, 인물, 실제 사례).
-- steps: ${c.timed ? '정답에 빠르게 도달하는 추론 단계 3~5개, 각 한 문장. 반드시 넣는다.' : '빈 배열.'}
+${c.timed
+? `- explain: 왜 정답인지 4~6문장. 오답 보기들이 왜 그럴듯해 보이는지도 짚는다. learn: 이 개념을 넓히는 미니 강의 4~6문장(관련 개념, 인물, 실제 사례).
+- steps: 처음 보는 사람도 따라올 수 있는 풀이 단계 5~8개, 각 한 문장. 실제 숫자와 계산을 넣고, 어림한 곳은 어림했다고 쓴다. 반드시 넣는다.
+- trap: 사람들의 직관이 여기서 왜 틀리기 쉬운지 2~3문장 (어떤 착각, 어떤 편향인지 이름까지).
+- rule: 다음에 비슷한 문제를 빨리 풀 때 쓸 어림 규칙이나 공식 한두 문장 (예: 2의 10제곱은 약 1000).`
+: `- explain: 왜 정답인지 2~3문장. learn: 이 개념을 넓히는 미니 강의 3~5문장(관련 개념, 인물, 실제 사례).
+- steps: 빈 배열.`}
 - 학습자가 최근 틀린 주제: ${weakTopics().join(', ') || '없음'}. 이 중 이 분야와 관련된 것이 있으면 연결된 개념을 1문항 넣되 같은 문제는 피한다.
 - 이미 낸 주제(반복 금지): ${recentTopics(cat).join(', ') || '없음'}.
 - 마지막에 오늘 문항들을 엮는 서술형 질문 deep 하나: q(질문), answer(모범답안 3~4문장).
 JSON만 답한다:
-{"items":[{"type":"mc","topic":"짧은 주제명","q":"","choices":["","","",""],"answer":0,"explain":"","learn":"","steps":[]}],"deep":{"q":"","answer":""}}`;
+{"items":[{"type":"mc","topic":"짧은 주제명","q":"","choices":["","","",""],"answer":0,"explain":"","learn":"","steps":[]${c.timed ? ',"trap":"","rule":""' : ''}}],"deep":{"q":"","answer":""}}`;
 }
 function validQuiz(j) {
   if (!j || !Array.isArray(j.items)) return null;
   const items = j.items.filter(it => it && typeof it.q === 'string' && typeof it.explain === 'string' && (
     (it.type === 'mc' && Array.isArray(it.choices) && it.choices.length === 4 && Number.isInteger(it.answer) && it.answer >= 0 && it.answer < 4) ||
     (it.type === 'estimate' && Number(it.value) > 0)
-  )).map(it => ({ ...it, topic: String(it.topic || '주제'), learn: String(it.learn || ''), steps: Array.isArray(it.steps) ? it.steps.map(String) : [], value: it.value != null ? Number(it.value) : undefined }));
+  )).map(it => ({ ...it, topic: String(it.topic || '주제'), learn: String(it.learn || ''), trap: it.trap ? String(it.trap) : '', rule: it.rule ? String(it.rule) : '', steps: Array.isArray(it.steps) ? it.steps.map(String) : [], value: it.value != null ? Number(it.value) : undefined }));
   if (items.length < 3) return null;
   const deep = j.deep && typeof j.deep.q === 'string' ? { q: j.deep.q, answer: String(j.deep.answer || '') } : null;
   return { items, deep };
@@ -640,14 +664,56 @@ function submit(conf) {
     <p class="verdict ${correct ? 'ok' : 'no'}">${verdict}${CATS[state.cat].timed ? ` <span class="hint">(${secs}초)</span>` : ''}</p>
     ${estLine}
     <p>${esc(it.explain)}</p>
-    ${it.steps?.length ? `<div class="steps"><h3>논리 전개</h3><ol>${it.steps.map((s, i) => `<li ${i ? 'hidden' : ''}>${esc(s)}</li>`).join('')}</ol>${it.steps.length > 1 ? '<button class="btn ghost" id="more-step">다음 단계 보기 →</button>' : ''}</div>` : ''}
+    ${it.steps?.length ? `<div class="steps"><h3>논리 전개</h3><ol>${it.steps.map((s, i) => `<li ${i ? 'hidden' : ''}>${esc(s)}</li>`).join('')}</ol>${it.steps.length > 1 ? '<div class="row"><button class="btn ghost" id="more-step">다음 단계 보기 →</button><button class="btn ghost" id="all-steps">전부 보기</button></div>' : ''}</div>` : ''}
+    ${it.trap ? `<div class="trap"><h3>직관의 함정</h3><p>${esc(it.trap)}</p></div>` : ''}
+    ${it.rule ? `<div class="rule"><h3>다음에 써먹을 어림 규칙</h3><p>${esc(it.rule)}</p></div>` : ''}
     ${it.learn ? `<div class="learn"><h3>더 알아보기</h3><p>${esc(it.learn)}</p></div>` : ''}
+    ${sample ? `<div class="tutor"><button class="btn" id="tutor-go">Claude에게 더 자세히 설명 듣기</button><div id="tutor-out"></div></div>` : ''}
     <div><button class="btn primary" id="next">${last ? '결과 보기' : '다음 문제'}</button></div>
   </div>`;
   const more = $('#more-step');
-  if (more) more.onclick = () => { const h = document.querySelector('.steps li[hidden]'); if (h) h.hidden = false; if (!document.querySelector('.steps li[hidden]')) more.remove(); };
+  const allBtn = $('#all-steps');
+  const doneSteps = () => { if (!document.querySelector('.steps li[hidden]')) { more?.remove(); allBtn?.remove(); } };
+  if (more) more.onclick = () => { const h = document.querySelector('.steps li[hidden]'); if (h) h.hidden = false; doneSteps(); };
+  if (allBtn) allBtn.onclick = () => { document.querySelectorAll('.steps li[hidden]').forEach(li => li.hidden = false); doneSteps(); };
+  const tutor = $('#tutor-go');
+  if (tutor) tutor.onclick = () => explainMore(it, correct, conf);
   $('#next').onclick = () => { if (last) finish(); else { state.idx++; renderQuestion(); } };
   $('#next').focus();
+}
+
+// 버튼을 눌렀을 때만 Claude가 이 문제를 과외 선생님처럼 길게 풀어 설명
+let tutorCtl = null;
+async function explainMore(it, correct, conf) {
+  const out = $('#tutor-out'), btn = $('#tutor-go');
+  if (!out || !sample) return;
+  tutorCtl?.abort(); tutorCtl = new AbortController();
+  btn.disabled = true; out.className = 'tutor-text'; out.textContent = '생각하는 중이에요…';
+  const mine = it.type === 'mc' ? (it.choices[state.picked] ?? '') : `${state.picked} ${it.unit || ''}`;
+  const right = it.type === 'mc' ? it.choices[it.answer] : `${it.value} ${it.unit || ''}`;
+  const prompt = `너는 대학 교양 수업의 친절한 과외 선생님이다. 학생이 방금 아래 문제를 풀었다. 해설을 읽었지만 더 자세히 이해하고 싶어 한다.
+문제: ${it.q}
+${it.type === 'mc' ? '보기: ' + it.choices.map((c, i) => `${'ABCD'[i]}) ${c}`).join(' / ') : ''}
+정답: ${right}
+학생의 답: ${mine} (${correct ? '맞음' : '틀림'}, 자신감: ${{ sure: '확신', half: '반반', guess: '찍음' }[conf]})
+이미 본 해설: ${it.explain}
+${it.steps?.length ? '이미 본 풀이 단계: ' + it.steps.join(' / ') : ''}
+
+한국어로, 다음 순서로 설명해 줘. 각 부분 앞에 굵은 소제목 없이 짧은 제목 한 줄을 붙인다.
+1. 한 문장 요약: 이 문제의 핵심 아이디어.
+2. 처음부터 천천히: 중학생도 따라올 수 있게, 숫자를 직접 넣어 한 단계씩.
+3. ${correct ? '학생이 맞혔지만' : '학생이 고른 답이'} 왜 그럴듯해 보이는지, 그리고 어디서 생각이 갈리는지.
+4. 비슷한 상황의 일상 예시 하나.
+5. 스스로 확인해 볼 짧은 연습 문제 하나와, 그 아래 한 줄 정답.
+전체 20문장 이내. 마크다운 기호(#, *, **)는 쓰지 말고 문단만 나눈다.`;
+  try {
+    await sample(prompt, { signal: tutorCtl.signal, cache: { gcTime: 86400000 }, onText: ({ text }) => { out.textContent = text; } });
+    btn.textContent = '다시 설명 듣기';
+  } catch (e) {
+    if (e?.code === 'not_granted' || e?.code === 'sampling_disabled') { sample = null; out.textContent = 'Claude 설명을 쓸 수 없어요. 위의 해설과 풀이 단계를 참고해 주세요.'; btn.remove(); return; }
+    if (e?.code === 'cancelled') return;
+    out.textContent = (e?.text ? e.text + '\n\n' : '') + (e?.code === 'rate_limited' ? '지금은 Claude 사용량이 많아요. 잠시 뒤 다시 눌러 주세요.' : '설명을 끝까지 받지 못했어요. 다시 눌러 주세요.');
+  } finally { btn.disabled = false; }
 }
 
 // ───────── 화면: 결과 ─────────
