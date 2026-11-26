@@ -126,6 +126,16 @@ p { margin: 0; }
 .loading::before { content: ""; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .loading::before { animation: none; } .bar > span { transition: none; } }
+/* 이야깃거리 */
+.issues { display: grid; gap: 12px; }
+.issue { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.issue.fun { background: color-mix(in srgb, var(--c-intuit) 10%, var(--paper)); }
+.i-title { margin: 0; font: 600 18px/1.45 var(--f-display); text-wrap: balance; }
+.i-why { font-size: 15px; color: var(--muted); }
+.i-why b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+.i-talk { font-size: 15px; background: var(--soft); border-radius: 8px; padding: 8px 10px; }
+.i-src { font-size: 13px; color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+.i-src:hover { text-decoration: underline; }
 @media (max-width: 480px) { .sheet { padding: 16px; } .day .dn { font-size: 11px; } .catbar { grid-template-columns: 76px 1fr 44px; } }
 </style>
 
@@ -134,6 +144,7 @@ p { margin: 0; }
     <h1>매일 교양 퀴즈</h1>
     <div class="tabs" role="group" aria-label="화면">
       <button id="tab-today" aria-pressed="true">오늘</button>
+      <button id="tab-issues" aria-pressed="false">이야깃거리</button>
       <button id="tab-stats" aria-pressed="false">내 기록</button>
     </div>
   </header>
@@ -615,17 +626,72 @@ function renderStats() {
 
 // ───────── 라우팅 ─────────
 function setTab(t) {
-  $('#tab-today').setAttribute('aria-pressed', t === 'today');
-  $('#tab-stats').setAttribute('aria-pressed', t === 'stats');
-  if (t === 'stats') { stopTimer(); state.prevView = state.view === 'stats' ? state.prevView : state.view; state.view = 'stats'; }
-  else if (state.view === 'stats') state.view = state.prevView === 'quiz' ? 'quiz' : state.prevView === 'result' ? 'result' : 'home';
+  ['today', 'issues', 'stats'].forEach(x => $('#tab-' + x).setAttribute('aria-pressed', t === x));
+  const side = v => v === 'stats' || v === 'issues';
+  if (side(t)) { stopTimer(); if (!side(state.view)) state.prevView = state.view; state.view = t; }
+  else if (side(state.view)) state.view = state.prevView === 'quiz' ? 'quiz' : state.prevView === 'result' ? 'result' : 'home';
   render();
 }
 $('#tab-today').onclick = () => setTab('today');
+$('#tab-issues').onclick = () => setTab('issues');
 $('#tab-stats').onclick = () => setTab('stats');
+
+// ───────── 이야깃거리: 매일 아침 예약 작업이 issues/<날짜> 문서로 채움 ─────────
+let issuesDb = null, issueDays = null, issueIdx = 0, issueErr = '';
+const ISSUE_CATS = { econ: '경제', world: '국제', society: '사회', science: '과학', tech: 'IT·기술', culture: '문화', fun: '웃긴 소식', sports: '스포츠', life: '생활' };
+const safeUrl = u => /^https:\/\//.test(String(u || '')) ? String(u) : null;
+async function loadIssues() {
+  if (!issuesDb) return;
+  try {
+    const q = await issuesDb.collection('issues').orderBy('date', 'desc').limit(7).get();
+    issueDays = q.docs.map(d => d.data()).filter(d => Array.isArray(d.items));
+    issueErr = '';
+  } catch { issueErr = '이야깃거리를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.'; issueDays = issueDays || []; }
+  if (state.view === 'issues') renderIssues();
+}
+function shareText(day) {
+  return `[${day.date} 오늘의 이야깃거리]\n` + day.items.map((it, n) => `${n + 1}. ${it.title}\n- ${it.summary}${it.talk ? `\n💬 ${it.talk}` : ''}`).join('\n\n');
+}
+function renderIssues() {
+  const main = $('#main');
+  if (!issuesDb) {
+    main.innerHTML = `<section class="sheet"><h2>오늘의 이야깃거리</h2><p class="lead">친구나 동료와 나눌 만한 최근 소식을 매일 아침 정리해 두는 곳이에요. claude.ai에서 이 페이지를 열면 볼 수 있어요.</p></section>`;
+    return;
+  }
+  if (!issueDays) { main.innerHTML = `<section class="sheet"><div class="loading">이야깃거리를 불러오는 중이에요.</div></section>`; return; }
+  if (!issueDays.length) {
+    main.innerHTML = `<section class="sheet"><h2>오늘의 이야깃거리</h2><p class="lead">아직 올라온 소식이 없어요. 매일 아침 7시 30분쯤 새 소식이 채워져요.</p>${issueErr ? `<p class="status err">${esc(issueErr)}</p>` : ''}</section>`;
+    return;
+  }
+  const day = issueDays[Math.min(issueIdx, issueDays.length - 1)];
+  main.innerHTML = `<section class="sheet">
+    <div class="eyebrow"><span>${esc(day.date)}${day.date === TODAY ? ' · 오늘' : ''}</span><span>· ${day.items.length}개</span></div>
+    <h2>나눌 만한 이야깃거리</h2>
+    <p class="lead">${esc(day.intro || '점심이나 단톡방에서 꺼내기 좋은 소식들이에요. 출처 링크로 원문을 확인할 수 있어요.')}</p>
+    ${issueDays.length > 1 ? `<div class="conf"><div class="row">${issueDays.map((d, n) => `<button class="btn ${n === issueIdx ? 'primary' : ''}" data-day="${n}">${esc(d.date.slice(5).replace('-', '/'))}</button>`).join('')}</div></div>` : ''}
+    <div class="issues">${day.items.map(it => { const u = safeUrl(it.source?.url); return `<article class="issue ${it.tone === 'fun' ? 'fun' : ''}">
+      <div class="eyebrow"><span class="chip">${esc(ISSUE_CATS[it.cat] || it.cat || '이슈')}</span>${it.tone === 'fun' ? '<span>가볍게 웃고 넘기기</span>' : '<span>인사이트</span>'}</div>
+      <h3 class="i-title">${esc(it.title)}</h3>
+      <p>${esc(it.summary)}</p>
+      ${it.why ? `<p class="i-why"><b>왜 볼 만한가</b> ${esc(it.why)}</p>` : ''}
+      ${it.talk ? `<p class="i-talk">💬 ${esc(it.talk)}</p>` : ''}
+      ${u ? `<a class="i-src" href="${esc(u)}" target="_blank" rel="noopener">출처: ${esc(it.source?.name || '원문')} ↗</a>` : ''}
+    </article>`; }).join('')}</div>
+    <div class="conf"><div class="row"><button class="btn" id="copy-issues">단톡방용으로 복사</button></div><p class="hint" id="copy-note"></p></div>
+    ${issueErr ? `<p class="status err">${esc(issueErr)}</p>` : ''}
+  </section>`;
+  main.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { issueIdx = +b.dataset.day; renderIssues(); });
+  $('#copy-issues').onclick = async () => {
+    const txt = shareText(day), note = $('#copy-note');
+    try { await navigator.clipboard.writeText(txt); note.textContent = '복사했어요. 단톡방에 붙여 넣으세요.'; }
+    catch { note.innerHTML = ''; const ta = document.createElement('textarea'); ta.value = txt; ta.style.width = '100%'; ta.rows = 8; note.appendChild(ta); ta.select(); }
+  };
+}
+
 function render() {
   renderMeta(); renderWeek();
-  if (state.view === 'stats') renderStats();
+  if (state.view === 'issues') renderIssues();
+  else if (state.view === 'stats') renderStats();
   else if (state.view === 'quiz') {
     if (state.answers.length > state.idx) { if (state.idx === state.quiz.items.length - 1) { state.view = 'result'; return renderResult(); } state.idx++; }
     renderQuestion();
@@ -640,6 +706,7 @@ render();
   if (!window.claude?.use) return;
   const [s, db, user] = await Promise.all([claude.use('sample'), claude.use('db'), claude.use('user')]);
   sample = s;
+  issuesDb = db; loadIssues();
   const uid = user ? await user.id().catch(() => null) : null;
   if (db && uid) { store.db = db; store.uid = uid; store.mode = 'db'; }
   try { sessions = await store.sessions(); } catch { sessions = store._l('sessions') || []; store.db = null; store.mode = 'local'; }
